@@ -9,9 +9,10 @@ const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, '..', 'data');
 if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
 
 const FILES = {
-  config: 'config.json',    // 系统配置：CF 凭据、协议、IP版本、登录密码等
+  config: 'config.json',    // 系统配置：CF 凭据、协议、IP版本、默认域名等
   tunnels: 'tunnels.json',  // 隧道定义：name, cfId, autostart, rules 等
   creds: 'creds.json',      // 外部 API 凭证
+  users: 'users.json',      // 面板用户（首个注册者为管理员）
 };
 
 const cache = {};
@@ -75,4 +76,7 @@ function findTunnel(id) { return getTunnels().find(t => t.id === id || t.cfId ==
 function getCreds() { return load('creds', []); }
 function saveCreds(list) { cache.creds = list; save('creds'); }
 
-module.exports = { DATA_DIR, getConfig, updateConfig, getTunnels, saveTunnels, findTunnel, getCreds, saveCreds };
+function getUsers() { return load('users', []); }
+function saveUsers(list) { cache.users = list; save('users'); }
+
+module.exports = { DATA_DIR, getConfig, updateConfig, getTunnels, saveTunnels, findTunnel, getCreds, saveCreds, getUsers, saveUsers };

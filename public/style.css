@@ -28,6 +28,9 @@ code { background: #eef2f7; padding: 1px 5px; border-radius: 4px; font-size: 12p
 .sidebar nav a:hover { background: #1e293b; }
 .sidebar nav a.active { background: var(--primary); color: #fff; }
 .sidebar-foot { margin-top: auto; font-size: 12px; color: #64748b; padding: 8px; }
+.logout-link { color: #94a3b8; text-decoration: none; font-size: 12px; }
+.logout-link:hover { color: #f87171; }
+a { color: var(--primary); }
 .main { flex: 1; padding: 28px 36px; max-width: 1100px; }
 .main h1 { font-size: 22px; margin-bottom: 18px; }
 .main h2 { font-size: 16px; margin: 22px 0 12px; }

@@ -4,6 +4,8 @@ const $ = (s) => document.querySelector(s);
 let tunnelsCache = [];
 let logsCache = [];
 let logTimer = null;
+let ME = null;          // 当前登录用户 { username, role }
+let cfgCache = {};      // 系统配置缓存（defaultDomain 等）
 
 // ---------- 工具 ----------
 async function api(path, opt = {}) {
@@ -14,6 +16,10 @@ async function api(path, opt = {}) {
     body: opt.body ? JSON.stringify(opt.body) : undefined,
   });
   const data = await res.json().catch(() => ({ success: false, error: '响应解析失败' }));
+  if (res.status === 401 && !path.startsWith('/auth') && !path.startsWith('/login') && !path.startsWith('/register') && !path.startsWith('/setup')) {
+    showLoginView('login');
+    throw new Error('登录已过期，请重新登录');
+  }
   if (!res.ok || data.success === false) throw new Error(data.error || `HTTP ${res.status}`);
   return data;
 }
@@ -32,14 +38,59 @@ function cfStatusTag(s) {
   return `<span class="tag ${m[0]}">${m[1]}</span>`;
 }
 
-// ---------- 登录 ----------
+// ---------- 认证视图 ----------
+function switchAuth(mode) {
+  ['setupForm', 'loginForm', 'registerForm'].forEach(id => $('#' + id).classList.add('hidden'));
+  const map = { setup: 'setupForm', login: 'loginForm', register: 'registerForm' };
+  $('#' + map[mode]).classList.remove('hidden');
+}
+function showLoginView(mode = 'login') {
+  ME = null;
+  $('#app').classList.add('hidden');
+  $('#loginView').classList.remove('hidden');
+  switchAuth(mode);
+}
+function showApp() {
+  $('#loginView').classList.add('hidden');
+  $('#app').classList.remove('hidden');
+}
+function authErr(id, msg) { $('#' + id).textContent = msg; }
+
+async function doSetup() {
+  if ($('#suPass').value !== $('#suPass2').value) return authErr('authErr1', '两次密码不一致');
+  try {
+    await api('/setup', { method: 'POST', body: { username: $('#suUser').value.trim(), password: $('#suPass').value } });
+    await afterLogin();
+  } catch (e) { authErr('authErr1', e.message); }
+}
 async function doLogin() {
   try {
-    await api('/login', { method: 'POST', body: { password: $('#loginPwd').value } });
-    $('#loginView').classList.add('hidden');
-    $('#app').classList.remove('hidden');
-    boot();
-  } catch (e) { $('#loginErr').textContent = e.message; }
+    await api('/login', { method: 'POST', body: { username: $('#loginUser').value.trim(), password: $('#loginPwd').value } });
+    await afterLogin();
+  } catch (e) { authErr('authErr2', e.message); }
+}
+async function doRegister() {
+  try {
+    const r = await api('/register', { method: 'POST', body: { username: $('#regUser').value.trim(), password: $('#regPass').value } });
+    authErr('authErr3', '');
+    alert(r.message || '注册成功，等待管理员审核');
+    switchAuth('login');
+  } catch (e) { authErr('authErr3', e.message); }
+}
+async function doLogout() {
+  try { await api('/logout', { method: 'POST' }); } catch (_) {}
+  showLoginView('login');
+}
+async function afterLogin() {
+  const { data } = await api('/auth/state');
+  ME = data.me;
+  applyRole();
+  showApp();
+  boot();
+}
+function applyRole() {
+  const admin = ME && ME.role === 'admin';
+  $('#navUsers').classList.toggle('hidden', !admin);
 }
 
 // ---------- 导航 ----------
@@ -60,6 +111,7 @@ function loadPage(p) {
   if (p === 'config') loadConfig();
   if (p === 'tunnels') refreshTunnels();
   if (p === 'creds') loadCreds();
+  if (p === 'users') loadUsers();
   if (p === 'logs') { loadLogTunnels(); renderLogs(); }
 }
 
@@ -88,13 +140,23 @@ async function refreshDashboard() {
 }
 
 // ---------- 系统配置 ----------
+async function loadZones() {
+  try {
+    const { data } = await api('/zones');
+    const sel = $('#cfgDomain');
+    const cur = cfgCache.defaultDomain || '';
+    sel.innerHTML = '<option value="">未设置</option>' + data.map(z => `<option value="${esc(z)}" ${z === cur ? 'selected' : ''}>${esc(z)}</option>`).join('');
+  } catch (_) { /* 未配置凭据时忽略 */ }
+}
 async function loadConfig() {
   try {
     const { data } = await api('/config');
+    cfgCache = data;
     $('#cfgAccount').value = data.accountId || '';
     $('#cfgProtocol').value = data.protocol || 'quic';
     $('#cfgEdge').value = data.edgeIpVersion || '4';
     $('#cfgToken').placeholder = data.hasToken ? '已保存（留空表示不修改）' : '请输入 API Token';
+    await loadZones();
   } catch (_) {}
 }
 function cfgMsg(text, ok) { const m = $('#cfgMsg'); m.textContent = text; m.className = 'msg ' + (ok ? 'ok' : 'err'); }
@@ -113,6 +175,7 @@ async function saveConfig() {
       apiToken: $('#cfgToken').value,
       protocol: $('#cfgProtocol').value,
       edgeIpVersion: $('#cfgEdge').value,
+      defaultDomain: $('#cfgDomain').value,
     }});
     cfgMsg('✅ 已保存', true);
     loadConfig();
@@ -164,11 +227,22 @@ async function toggleAutostart(id, i) {
   refreshTunnels();
 }
 
-// ---------- 转发规则（简化：在页内用弹窗编辑） ----------
+// ---------- 转发规则 ----------
+const RAND_WORDS = ['blue', 'sun', 'moon', 'lake', 'bird', 'nova', 'fox', 'sky', 'pine', 'cloud', 'mist', 'river'];
+function randomPrefix() {
+  const w = () => RAND_WORDS[Math.floor(Math.random() * RAND_WORDS.length)];
+  return `${w()}-${w()}-${Math.floor(Math.random() * 90 + 10)}`;
+}
+function randHost() {
+  const domain = ($('#cfgDomain').value || cfgCache.defaultDomain || '').trim();
+  if (!domain) { $('#ruleMsg').textContent = '请先在「系统配置」中设置默认域名'; $('#ruleMsg').className = 'msg err'; return; }
+  $('#ruleHost').value = `${randomPrefix()}.${domain}`;
+}
 async function showRules(id) {
   try {
     const { data } = await api(`/tunnels/${id}/rules`);
     const rules = (data.ingress || []).filter(r => r.hostname);
+    const domain = $('#cfgDomain').value || cfgCache.defaultDomain || '';
     let html = `<div class="modal" id="rulesModal"><div class="modal-card" style="width:640px;max-height:80vh;overflow:auto">
       <h3>域名转发规则 - ${esc(data.tunnel.name)}</h3>
       <table class="tbl" style="margin-top:12px"><thead><tr><th>域名</th><th>服务地址</th><th>操作</th></tr></thead><tbody>
@@ -176,10 +250,13 @@ async function showRules(id) {
         <td><button class="mini danger" onclick="delRule('${id}', ${i})">删除</button></td></tr>`).join('') || '<tr><td colspan="3" class="muted">暂无规则</td></tr>'}
       </tbody></table>
       <h3 style="margin-top:16px">添加规则</h3>
-      <input id="ruleHost" placeholder="对外域名，如 nas.example.com">
-      <input id="ruleSvc" placeholder="内网服务地址，如 http://192.168.1.10:5000">
+      <div style="display:flex;gap:8px;align-items:center;margin-top:8px">
+        <input id="ruleHost" placeholder="对外域名，如 nas${domain ? '.' + esc(domain) : '.example.com'}" style="flex:1;padding:9px 12px;border:1px solid var(--border);border-radius:8px">
+        <button class="mini secondary" onclick="randHost()">🎲 随机域名</button>
+      </div>
+      <input id="ruleSvc" placeholder="内网服务地址，如 http://192.168.1.10:5000" style="margin-top:8px;padding:9px 12px;border:1px solid var(--border);border-radius:8px;width:100%">
       <label class="chk" style="margin-top:8px"><input type="checkbox" id="ruleNoTLS"> 跳过源站 TLS 证书验证（源站为 HTTPS 自签时勾选）</label>
-      <p class="muted small">保存后自动创建 DNS CNAME 记录指向该隧道。</p>
+      <p class="muted small">${domain ? `默认域名：${esc(domain)}（在「系统配置」中可修改）。点「随机域名」自动生成子域名，保存后自动创建 DNS CNAME，访问即为 HTTPS` : '提示：在「系统配置」中设置默认域名后，可一键生成随机子域名'}</p>
       <div class="btn-row"><button class="secondary" onclick="document.getElementById('rulesModal').remove()">关闭</button>
       <button onclick="addRule('${id}')">添加规则</button></div>
       <p id="ruleMsg" class="msg"></p></div></div>`;
@@ -237,6 +314,59 @@ function copyKey(id) {
   if (full) navigator.clipboard?.writeText(full).catch(() => {});
 }
 
+// ---------- 用户管理（管理员） ----------
+async function loadUsers() {
+  try {
+    const { data } = await api('/users');
+    $('#userRows').innerHTML = data.map(u => {
+      const stMap = { approved: ['ok', '正常'], pending: ['warn', '待审核'], disabled: ['off', '已禁用'] };
+      const st = stMap[u.status] || ['off', u.status];
+      const my = u.username === (ME && ME.username);
+      const ops = [];
+      if (u.status === 'pending') ops.push(`<button class="mini" onclick="userAct('${u.id}','approve')">通过审核</button>`);
+      if (u.status === 'approved' && !my) ops.push(`<button class="mini secondary" onclick="userAct('${u.id}','disable')">禁用</button>`);
+      if (u.status === 'disabled') ops.push(`<button class="mini" onclick="userAct('${u.id}','approve')">启用</button>`);
+      ops.push(`<button class="mini secondary" onclick="userResetPw('${u.id}','${esc(u.username)}')">改密</button>`);
+      if (!my) ops.push(`<button class="mini danger" onclick="userDel('${u.id}','${esc(u.username)}')">删除</button>`);
+      return `<tr>
+        <td><b>${esc(u.username)}</b></td>
+        <td>${u.role === 'admin' ? '<span class="tag warn">管理员</span>' : '普通用户'}</td>
+        <td><span class="tag ${st[0]}">${st[1]}</span></td>
+        <td class="muted">${esc((u.createdAt || '').slice(0, 19).replace('T', ' '))}</td>
+        <td>${ops.join(' ')}</td></tr>`;
+    }).join('');
+    try {
+      const st = await api('/auth/state');
+      $('#regOpen').checked = st.data.regOpen;
+    } catch (_) {}
+  } catch (e) { $('#userMsg').textContent = e.message; $('#userMsg').className = 'msg err'; }
+}
+async function userAct(id, action) {
+  try { await api(`/users/${id}/${action}`, { method: 'POST' }); } catch (e) { alert(e.message); }
+  loadUsers();
+}
+async function userDel(id, name) {
+  if (!confirm(`确认删除用户「${name}」？`)) return;
+  try { await api('/users/' + id, { method: 'DELETE' }); } catch (e) { alert(e.message); }
+  loadUsers();
+}
+async function userResetPw(id, name) {
+  const pwd = prompt(`为「${name}」设置新密码（至少 6 位）：`);
+  if (pwd === null) return;
+  try { await api(`/users/${id}/password`, { method: 'POST', body: { password: pwd } }); alert('✅ 已重置'); } catch (e) { alert(e.message); }
+}
+async function adminAddUser() {
+  try {
+    await api('/users', { method: 'POST', body: { username: $('#newUUser').value.trim(), password: $('#newUPass').value } });
+    $('#newUUser').value = ''; $('#newUPass').value = '';
+    $('#userMsg').textContent = '✅ 已添加'; $('#userMsg').className = 'msg ok';
+    loadUsers();
+  } catch (e) { $('#userMsg').textContent = e.message; $('#userMsg').className = 'msg err'; }
+}
+async function toggleRegOpen() {
+  try { await api('/config/regopen', { method: 'POST', body: { open: $('#regOpen').checked } }); } catch (e) { alert(e.message); }
+}
+
 // ---------- 日志 ----------
 async function loadLogTunnels() {
   await refreshTunnelsSilent();
@@ -266,6 +396,7 @@ function autoLog() {
 
 // ---------- 轮询 ----------
 setInterval(() => {
+  if (!ME) return;
   const active = document.querySelector('.sidebar nav a.active');
   if (active && active.dataset.page === 'dashboard') refreshDashboard();
   if (active && active.dataset.page === 'tunnels') refreshTunnels();
@@ -274,14 +405,22 @@ setInterval(() => {
 // ---------- 启动 ----------
 async function boot() {
   loadPage('dashboard');
-  setInterval(() => { if ($('#logAuto').checked && !$('#page-logs').classList.contains('hidden')) renderLogs(); }, 3000);
 }
 (async function init() {
   try {
-    const { required } = await api('/auth-required');
-    if (required) { $('#loginView').classList.remove('hidden'); return; }
-  } catch (_) {}
-  $('#app').classList.remove('hidden');
-  boot();
+    const { data } = await api('/auth/state');
+    if (!data.loggedIn) {
+      showLoginView(data.needsSetup ? 'setup' : 'login');
+      return;
+    }
+    ME = data.me;
+    applyRole();
+    showApp();
+    boot();
+  } catch (_) {
+    showLoginView('login');
+  }
 })();
 $('#loginPwd').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+$('#regPass').addEventListener('keydown', e => { if (e.key === 'Enter') doRegister(); });
+$('#suPass2').addEventListener('keydown', e => { if (e.key === 'Enter') doSetup(); });

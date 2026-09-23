@@ -9,11 +9,33 @@
 <body>
 <div id="loginView" class="login-view hidden">
   <div class="login-card">
-    <h2>🔐 管理面板</h2>
-    <p class="muted">请输入管理密码</p>
-    <input type="password" id="loginPwd" placeholder="管理密码">
-    <button onclick="doLogin()">登 录</button>
-    <p id="loginErr" class="err"></p>
+    <h2>🔐 Cloudflare Tunnel 面板</h2>
+    <!-- 首次使用：创建管理员 -->
+    <div id="setupForm" class="hidden">
+      <p class="muted">首次使用，请创建管理员账户</p>
+      <input id="suUser" placeholder="管理员用户名（字母/数字/下划线）">
+      <input id="suPass" type="password" placeholder="密码（至少 6 位）">
+      <input id="suPass2" type="password" placeholder="确认密码">
+      <button onclick="doSetup()">创建管理员账户</button>
+      <p id="authErr1" class="err"></p>
+    </div>
+    <!-- 登录 -->
+    <div id="loginForm" class="hidden">
+      <input id="loginUser" placeholder="用户名">
+      <input id="loginPwd" type="password" placeholder="密码">
+      <button onclick="doLogin()">登 录</button>
+      <p id="authErr2" class="err"></p>
+      <p class="small muted">没有账号？<a href="#" onclick="switchAuth('register');return false;">注册账号（需管理员审核）</a></p>
+    </div>
+    <!-- 注册 -->
+    <div id="registerForm" class="hidden">
+      <p class="muted">注册后需管理员审核才能登录</p>
+      <input id="regUser" placeholder="用户名（字母/数字/下划线）">
+      <input id="regPass" type="password" placeholder="密码（至少 6 位）">
+      <button onclick="doRegister()">注 册</button>
+      <p id="authErr3" class="err"></p>
+      <p class="small muted"><a href="#" onclick="switchAuth('login');return false;">返回登录</a></p>
+    </div>
   </div>
 </div>
 
@@ -29,9 +51,10 @@
       <a data-page="tunnels">🌐 Tunnel 列表</a>
       <a data-page="creds">🔑 API 凭证</a>
       <a data-page="logs">📜 运行日志</a>
+      <a data-page="users" id="navUsers" class="hidden">👥 用户管理</a>
       <a data-page="about">ℹ️ 关于</a>
     </nav>
-    <div class="sidebar-foot" id="onlineCount"></div>
+    <div class="sidebar-foot"><span id="onlineCount"></span><br><a href="#" onclick="doLogout();return false;" class="logout-link" id="navLogout">退出登录</a></div>
   </aside>
 
   <main class="main">
@@ -69,6 +92,9 @@
             <option value="4">IPv4（最稳定）</option>
             <option value="6">IPv6（有原生 IPv6 时延迟更优）</option>
           </select>
+        </label>
+        <label>默认域名（用于一键生成随机子域名）
+          <select id="cfgDomain"><option value="">未设置（可稍后选择）</option></select>
         </label>
         <div class="btn-row">
           <button class="secondary" onclick="testConfig()">测试配置</button>
@@ -123,14 +149,34 @@
       <pre id="logView" class="log-view">加载中…</pre>
     </section>
 
+    <!-- 用户管理（仅管理员可见） -->
+    <section id="page-users" class="page hidden">
+      <div class="page-head"><h1>用户管理</h1></div>
+      <div class="card">
+        <label class="chk"><input type="checkbox" id="regOpen" onchange="toggleRegOpen()"> 开放注册（新用户注册后需在此审核通过才能登录）</label>
+        <div class="btn-row">
+          <input id="newUUser" placeholder="用户名" style="max-width:180px;padding:8px 10px;border:1px solid var(--border);border-radius:8px">
+          <input id="newUPass" type="password" placeholder="初始密码" style="max-width:180px;padding:8px 10px;border:1px solid var(--border);border-radius:8px">
+          <button class="mini" onclick="adminAddUser()">＋ 直接添加（免审核）</button>
+        </div>
+        <p id="userMsg" class="msg"></p>
+      </div>
+      <table class="tbl">
+        <thead><tr><th>用户名</th><th>角色</th><th>状态</th><th>创建时间</th><th>操作</th></tr></thead>
+        <tbody id="userRows"></tbody>
+      </table>
+    </section>
+
     <!-- 关于 -->
     <section id="page-about" class="page">
       <h1>关于</h1>
       <div class="card">
-        <h3>CF Tunnel Manager v1.0.0</h3>
+        <h3>CF Tunnel Manager v1.1.0</h3>
         <p class="muted">参考「飞牛 Cloudflare Tunnel (NasPK)」重构的开源多隧道管理面板。</p>
         <ul class="muted small">
-          <li>单容器多隧道并行在线（原版仅支持单隧道）</li>
+          <li>多隧道并行在线（原版仅支持单隧道）</li>
+          <li>多用户管理：首个注册者为管理员，后续注册需审核</li>
+          <li>默认域名 + 一键随机子域名</li>
           <li>Web 面板端口：<b>19090</b> ｜ 外部 API：<b>19092</b> ｜ MCP：<b>19093</b></li>
           <li>数据持久化目录：<b id="aboutData">/data</b></li>
           <li>凭据加密保存于本地，不会上传到任何第三方服务器</li>
