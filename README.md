@@ -24,6 +24,11 @@
 ## 部署（Docker，推荐 NAS）
 
 ```bash
+# 1. 下载项目
+git clone https://github.com/lieren-2012/cloudflare-tunnel-manager.git
+
+# 2. 构建并启动
+cd cloudflare-tunnel-manager
 docker compose up -d --build
 ```
 
