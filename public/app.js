@@ -183,16 +183,37 @@ async function saveConfig() {
 }
 
 // ---------- Tunnel 列表 ----------
+let routesCache = {}; // cfId -> ingress 规则数组（null 表示获取失败）
 async function refreshTunnels() {
   try {
     const { data } = await api('/tunnels');
     tunnelsCache = data.tunnels || [];
-    $('#tunnelRows').innerHTML = tunnelsCache.length ? tunnelsCache.map((t, i) => `
+    // 并行拉取各隧道的转发规则，供列表直接展示域名与内网服务地址
+    await Promise.all(tunnelsCache.map(async t => {
+      try {
+        const { data: rd } = await api(`/tunnels/${t.cfId}/rules`);
+        routesCache[t.cfId] = ((rd && rd.ingress) || []).filter(r => r.hostname);
+      } catch (_) { routesCache[t.cfId] = null; }
+    }));
+    $('#tunnelRows').innerHTML = tunnelsCache.length ? tunnelsCache.map((t, i) => {
+      const routes = routesCache[t.cfId];
+      const routeHtml = routes === null
+        ? '<span class="muted small">无法获取</span>'
+        : (routes && routes.length
+          ? routes.map(r => {
+              const svc = /^https?:\/\//i.test(r.service)
+                ? `<a href="${esc(r.service)}" target="_blank" rel="noopener" title="打开内网服务">${esc(r.service)}</a>`
+                : `<span class="muted small">${esc(r.service)}</span>`;
+              return `<div class="route-line">🔗 <a href="https://${esc(r.hostname)}" target="_blank" rel="noopener" title="打开域名（HTTPS）">${esc(r.hostname)}</a><br><span class="muted small">↳</span> ${svc}</div>`;
+            }).join('')
+          : '<span class="muted small">暂无规则</span>');
+      return `
       <tr>
         <td><b>${esc(t.name)}</b><br><span class="muted small">${esc(t.cfId.slice(0, 12))}…</span></td>
         <td>${cfStatusTag(t.cfStatus)}</td>
         <td>${t.online ? '<span class="tag ok">在线</span>' : '<span class="tag off">离线</span>'}</td>
         <td>${t.local ? fmtDur(t.local.uptimeSec) : '-'}</td>
+        <td class="route-cell">${routeHtml}</td>
         <td><button class="mini secondary" onclick="toggleAutostart('${t.cfId}', ${i})">${t.autostart ? '✅ 开启' : '⬜ 关闭'}</button></td>
         <td>
           ${t.online
@@ -201,8 +222,8 @@ async function refreshTunnels() {
           <button class="mini secondary" onclick="showRules('${t.cfId}')">路由</button>
           <button class="mini danger" onclick="delTunnel('${t.cfId}', '${esc(t.name)}')">删除</button>
         </td>
-      </tr>`).join('') : '<tr><td colspan="6" class="muted" style="text-align:center;padding:24px">暂无 Tunnel，点击右上角「新建 Tunnel」</td></tr>';
-  } catch (e) { $('#tunnelRows').innerHTML = `<tr><td colspan="6" class="err">加载失败: ${esc(e.message)}</td></tr>`; }
+      </tr>`;}).join('') : '<tr><td colspan="7" class="muted" style="text-align:center;padding:24px">暂无 Tunnel，点击右上角「新建 Tunnel」</td></tr>';
+  } catch (e) { $('#tunnelRows').innerHTML = `<tr><td colspan="7" class="err">加载失败: ${esc(e.message)}</td></tr>`; }
 }
 
 function showCreate() { $('#modalMsg').textContent = ''; $('#newName').value = ''; $('#modal').classList.remove('hidden'); }
