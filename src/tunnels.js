@@ -71,9 +71,12 @@ async function startTunnel(tunnelId) {
   const token = await cfd.getTunnelToken(tunnel.cfId);
 
   const cfg = store.getConfig();
-  const args = ['tunnel', '--no-autoupdate', 'run'];
+  // 注意参数位置：--edge-ip-version 定义在 tunnel 命令层（run 子命令不识别），
+  // 必须放在 run 之前；--protocol 则两种位置都合法。合法值: auto/4/6
+  const args = ['tunnel', '--no-autoupdate'];
+  if (cfg.edgeIpVersion === '4' || cfg.edgeIpVersion === '6') args.push('--edge-ip-version', cfg.edgeIpVersion);
+  args.push('run');
   if (cfg.protocol === 'quic' || cfg.protocol === 'http2') args.push('--protocol', cfg.protocol);
-  if (cfg.edgeIpVersion === '4' || cfg.edgeIpVersion === '6') args.push('--edge-ip-version', cfg.edgeIpVersion); // 合法值: auto/4/6（不能带 v 前缀）
   args.push('--token', token);
 
   const proc = spawn(CLOUDFLARED, args, { stdio: ['ignore', 'pipe', 'pipe'] });
