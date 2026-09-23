@@ -73,7 +73,7 @@ async function startTunnel(tunnelId) {
   const cfg = store.getConfig();
   const args = ['tunnel', '--no-autoupdate', 'run'];
   if (cfg.protocol === 'quic' || cfg.protocol === 'http2') args.push('--protocol', cfg.protocol);
-  if (cfg.edgeIpVersion === '4' || cfg.edgeIpVersion === '6') args.push('--edge-ip-version', 'v' + cfg.edgeIpVersion);
+  if (cfg.edgeIpVersion === '4' || cfg.edgeIpVersion === '6') args.push('--edge-ip-version', cfg.edgeIpVersion); // 合法值: auto/4/6（不能带 v 前缀）
   args.push('--token', token);
 
   const proc = spawn(CLOUDFLARED, args, { stdio: ['ignore', 'pipe', 'pipe'] });
@@ -98,6 +98,11 @@ async function startTunnel(tunnelId) {
       pushLog(tunnelId, `[manager] 隧道「${name}」已断开。`);
       return;
     }
+    // 从最近的日志中捞出真正的错误行（cloudflared 参数错误时会打印大段 help，淹没关键信息）
+    const recent = logBuf.get(tunnelId) || [];
+    const errLine = [...recent].reverse().find(l =>
+      /incorrect usage|invalid|illegal|cannot|failed|error:/i.test(l.line) && !l.line.includes('ERR_CONNECTION') );
+    if (errLine) pushLog(tunnelId, `[manager] ⚠️ 错误原因: ${errLine.line}`);
     // 异常退出：指数退避自动重启（1s/2s/4s... 最多 60s）
     if (t && t.autostart !== false) {
       const delay = Math.min(60000, 1000 * Math.pow(2, Math.min(e ? e.restarts : 0, 6)));
