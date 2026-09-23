@@ -71,3 +71,14 @@ AI 客户端（如 WorkBuddy）可通过 MCP 接入：
 
 Node.js 22 + Express，前端原生单页（无构建步骤），cloudflared 由 Docker 多阶段构建内置（alpine）。
 非 Docker 运行需自行安装 cloudflared（或设 `CLOUDFLARED_PATH`）。
+
+## ⚠️ 安全须知
+
+- **默认免登录**：未设置 `ADMIN_PASSWORD` 时面板无认证，**务必只在内网使用**；暴露公网前请务必设置管理密码，并建议用 Nginx/Caddy 反代加 HTTPS
+- **API 凭证等于管理权限**：`X-API-Key` 泄露 = 他人可完全操控你的隧道与 DNS，请妥善保管、定期轮换
+- **凭据本地存储**：Cloudflare API Token 仅加密保存在你自己的 `/data` 目录，项目本身不含任何上报逻辑
+- 本项目为个人学习/自用性质的开源工具，**非 Cloudflare 官方项目**，与 Cloudflare, Inc. 无关
+
+## 📄 License
+
+[MIT](LICENSE)
