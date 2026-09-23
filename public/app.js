@@ -91,6 +91,8 @@ async function afterLogin() {
 function applyRole() {
   const admin = ME && ME.role === 'admin';
   $('#navUsers').classList.toggle('hidden', !admin);
+  $('#navConfig').classList.toggle('hidden', !admin);
+  $('#navCreds').classList.toggle('hidden', !admin);
 }
 
 // ---------- 导航 ----------
@@ -183,11 +185,14 @@ async function saveConfig() {
 }
 
 // ---------- Tunnel 列表 ----------
-let routesCache = {}; // cfId -> ingress 规则数组（null 表示获取失败）
+let routesCache = {};      // cfId -> ingress 规则数组（null 表示获取失败）
+const collapsedGroups = new Set(); // 已折叠的分组名
+
 async function refreshTunnels() {
   try {
     const { data } = await api('/tunnels');
     tunnelsCache = data.tunnels || [];
+    if (data.deviceName) window.panelDevice = data.deviceName;
     // 并行拉取各隧道的转发规则，供列表直接展示域名与内网服务地址
     await Promise.all(tunnelsCache.map(async t => {
       try {
@@ -195,42 +200,100 @@ async function refreshTunnels() {
         routesCache[t.cfId] = ((rd && rd.ingress) || []).filter(r => r.hostname);
       } catch (_) { routesCache[t.cfId] = null; }
     }));
-    $('#tunnelRows').innerHTML = tunnelsCache.length ? tunnelsCache.map((t, i) => {
-      const routes = routesCache[t.cfId];
-      const routeHtml = routes === null
-        ? '<span class="muted small">无法获取</span>'
-        : (routes && routes.length
-          ? routes.map(r => {
-              const svc = /^https?:\/\//i.test(r.service)
-                ? `<a href="${esc(r.service)}" target="_blank" rel="noopener" title="打开内网服务">${esc(r.service)}</a>`
-                : `<span class="muted small">${esc(r.service)}</span>`;
-              return `<div class="route-line">🔗 <a href="https://${esc(r.hostname)}" target="_blank" rel="noopener" title="打开域名（HTTPS）">${esc(r.hostname)}</a><br><span class="muted small">↳</span> ${svc}</div>`;
-            }).join('')
-          : '<span class="muted small">暂无规则</span>');
-      return `
-      <tr>
-        <td><b>${esc(t.name)}</b><br><span class="muted small">${esc(t.cfId.slice(0, 12))}…</span></td>
-        <td>${cfStatusTag(t.cfStatus)}</td>
-        <td>${t.online ? '<span class="tag ok">在线</span>' : '<span class="tag off">离线</span>'}</td>
-        <td>${t.local ? fmtDur(t.local.uptimeSec) : '-'}</td>
-        <td class="route-cell">${routeHtml}</td>
-        <td><button class="mini secondary" onclick="toggleAutostart('${t.cfId}', ${i})">${t.autostart ? '✅ 开启' : '⬜ 关闭'}</button></td>
-        <td>
-          ${t.online
-            ? `<button class="mini secondary" onclick="disconnect('${t.cfId}')">断开</button>`
-            : `<button class="mini" onclick="connect('${t.cfId}')">连接</button>`}
-          <button class="mini secondary" onclick="showRules('${t.cfId}')">路由</button>
-          <button class="mini danger" onclick="delTunnel('${t.cfId}', '${esc(t.name)}')">删除</button>
-        </td>
-      </tr>`;}).join('') : '<tr><td colspan="7" class="muted" style="text-align:center;padding:24px">暂无 Tunnel，点击右上角「新建 Tunnel」</td></tr>';
+    renderTunnelRows();
   } catch (e) { $('#tunnelRows').innerHTML = `<tr><td colspan="7" class="err">加载失败: ${esc(e.message)}</td></tr>`; }
 }
 
-function showCreate() { $('#modalMsg').textContent = ''; $('#newName').value = ''; $('#modal').classList.remove('hidden'); }
+function routeCellHtml(t) {
+  const routes = routesCache[t.cfId];
+  if (routes === null) return '<span class="muted small">无法获取</span>';
+  if (!routes.length) return '<span class="muted small">暂无规则</span>';
+  return routes.map(r => {
+    const svc = /^https?:\/\//i.test(r.service)
+      ? `<a href="${esc(r.service)}" target="_blank" rel="noopener" title="打开内网服务">${esc(r.service)}</a>`
+      : `<span class="muted small">${esc(r.service)}</span>`;
+    return `<div class="route-line">🔗 <a href="https://${esc(r.hostname)}" target="_blank" rel="noopener" title="打开域名（HTTPS）">${esc(r.hostname)}</a><br><span class="muted small">↳</span> ${svc}</div>`;
+  }).join('');
+}
+
+function tunnelRowHtml(t, i) {
+  const admin = ME && ME.role === 'admin';
+  const remote = !t.isLocal;
+  const deviceBadge = remote
+    ? ' <span class="tag warn" title="由同一 Cloudflare 账号下其他设备的面板创建">☁️ 其他设备</span>'
+    : ' <span class="tag ok" title="本机创建并运行的隧道">🏠 本机</span>';
+  const ownerTag = admin && t.owner ? ` <span class="muted small">👤${esc(t.owner)}</span>` : '';
+  const grpTag = !remote
+    ? `<a class="grp-tag" title="点击修改分组" onclick="editGroup('${t.cfId}', '${esc(t.group || '')}')">📁 ${t.group ? esc(t.group) : '未分组'}</a>`
+    : '';
+  const routeHtml = routeCellHtml(t);
+  const actions = remote
+    ? `<button class="mini secondary" onclick="showRules('${t.cfId}')">路由</button>`
+    : `${t.online
+        ? `<button class="mini secondary" onclick="disconnect('${t.cfId}')">断开</button>`
+        : `<button class="mini" onclick="connect('${t.cfId}')">连接</button>`}
+      <button class="mini secondary" onclick="showRules('${t.cfId}')">路由</button>
+      <button class="mini danger" onclick="delTunnel('${t.cfId}', '${esc(t.name)}')">删除</button>`;
+  return `
+    <tr>
+      <td><b>${esc(t.name)}</b>${deviceBadge}${ownerTag}<br>${grpTag}<span class="muted small">${esc(t.cfId.slice(0, 12))}…</span></td>
+      <td>${cfStatusTag(t.cfStatus)}</td>
+      <td>${remote ? '<span class="muted">-</span>' : (t.online ? '<span class="tag ok">在线</span>' : '<span class="tag off">离线</span>')}</td>
+      <td>${t.local ? fmtDur(t.local.uptimeSec) : '-'}</td>
+      <td class="route-cell">${routeHtml}</td>
+      <td>${remote ? '-' : `<button class="mini secondary" onclick="toggleAutostart('${t.cfId}', ${i})">${t.autostart ? '✅ 开启' : '⬜ 关闭'}</button>`}</td>
+      <td>${actions}</td>
+    </tr>`;
+}
+
+function renderTunnelRows() {
+  if (!tunnelsCache.length) {
+    $('#tunnelRows').innerHTML = '<tr><td colspan="7" class="muted" style="text-align:center;padding:24px">暂无 Tunnel，点击右上角「新建 Tunnel」</td></tr>';
+    return;
+  }
+  const admin = ME && ME.role === 'admin';
+  const localT = tunnelsCache.filter(t => t.isLocal);
+  const remoteT = tunnelsCache.filter(t => !t.isLocal);
+  const groups = [];
+  for (const t of localT) { const g = t.group || '未分组'; if (!groups.includes(g)) groups.push(g); }
+
+  const out = [];
+  for (const g of groups) {
+    const rows = localT.map((t, i) => ({ t, i })).filter(x => (x.t.group || '未分组') === g);
+    const folded = collapsedGroups.has(g);
+    out.push(`<tr class="group-head" onclick="toggleGroup('${esc(g)}')"><td colspan="7">${folded ? '▶' : '▼'} 📁 <b>${esc(g)}</b> <span class="muted small">(${rows.length})</span></td></tr>`);
+    if (!folded) for (const { t, i } of rows) out.push(tunnelRowHtml(t, i));
+  }
+  // 其他设备的隧道（仅管理员可见，只读展示）
+  if (admin && remoteT.length) {
+    const folded = collapsedGroups.has('__remote__');
+    out.push(`<tr class="group-head remote" onclick="toggleGroup('__remote__')"><td colspan="7">${folded ? '▶' : '▼'} ☁️ 其他设备的隧道 <span class="muted small">(${remoteT.length}，同一 Cloudflare 账号，仅可查看)</span></td></tr>`);
+    if (!folded) for (const { t, i } of remoteT.map((t, i) => ({ t, i }))) out.push(tunnelRowHtml(t, i));
+  }
+  $('#tunnelRows').innerHTML = out.join('');
+}
+
+function toggleGroup(g) {
+  collapsedGroups.has(g) ? collapsedGroups.delete(g) : collapsedGroups.add(g);
+  renderTunnelRows();
+}
+
+async function editGroup(cfId, cur) {
+  const g = prompt('分组名称（留空表示移出分组）：', cur || '');
+  if (g === null) return;
+  try { await api(`/tunnels/${cfId}/meta`, { method: 'PATCH', body: { group: g } }); } catch (e) { alert(e.message); }
+  refreshTunnels();
+}
+
+function showCreate() {
+  $('#modalMsg').textContent = ''; $('#newName').value = ''; $('#newGroup').value = '';
+  $('#modalDev').textContent = '设备：' + (window.panelDevice || '本机');
+  $('#modal').classList.remove('hidden');
+}
 function hideModal() { $('#modal').classList.add('hidden'); }
 async function createTunnel() {
   try {
-    await api('/tunnels', { method: 'POST', body: { name: $('#newName').value } });
+    await api('/tunnels', { method: 'POST', body: { name: $('#newName').value, group: $('#newGroup').value } });
     hideModal();
     refreshTunnels();
   } catch (e) { $('#modalMsg').textContent = e.message; $('#modalMsg').className = 'msg err'; }

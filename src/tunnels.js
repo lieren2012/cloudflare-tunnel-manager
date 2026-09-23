@@ -165,6 +165,8 @@ function localStatus() {
 }
 
 // 云端健康状态 + 本地进程状态合并
+// defined=true 表示本机创建/管理的隧道（绑定本设备）；未 defined 的是同一 CF 账号下
+// 其他设备面板创建的隧道，本机只读展示（不可连接/删除）。
 async function fullStatus() {
   const cfg = store.getConfig();
   if (!cfg.apiToken || !cfg.accountId) return { configured: false, tunnels: [] };
@@ -184,16 +186,20 @@ async function fullStatus() {
       online: def ? !!local[def.id] : false,
       local: def ? (local[def.id] || null) : null,
       defined: !!def,
+      isLocal: !!def,
+      device: def ? (def.hostName || '本机') : null,
+      group: def ? (def.group || '') : '',
+      owner: def ? (def.owner || '') : '',
       autostart: def ? def.autostart !== false : true,
     };
   });
   // 本地定义了但 CF 已删除的（僵尸）
   for (const t of defined) {
     if (!cfTunnels.find(x => x.id === t.cfId)) {
-      tunnels.push({ cfId: t.cfId, name: t.name, cfStatus: 'deleted', connections: 0, createdAt: null, online: !!local[t.id], local: local[t.id] || null, defined: true, autostart: t.autostart !== false });
+      tunnels.push({ cfId: t.cfId, name: t.name, cfStatus: 'deleted', connections: 0, createdAt: null, online: !!local[t.id], local: local[t.id] || null, defined: true, isLocal: true, device: t.hostName || '本机', group: t.group || '', owner: t.owner || '', autostart: t.autostart !== false });
     }
   }
-  return { configured: true, tunnels };
+  return { configured: true, tunnels, deviceName: os.hostname() };
 }
 
 function getLogs(tunnelId) {

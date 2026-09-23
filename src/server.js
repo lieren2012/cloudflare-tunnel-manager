@@ -6,6 +6,7 @@
  */
 const express = require('express');
 const crypto = require('crypto');
+const os = require('os');
 const path = require('path');
 const store = require('./store');
 const tunnelMgr = require('./tunnels');
@@ -222,7 +223,7 @@ app.get('/api/config', (req, res) => {
   res.json({ success: true, data: { accountId: cfg.accountId, protocol: cfg.protocol, edgeIpVersion: cfg.edgeIpVersion, hasToken: !!cfg.apiToken, defaultDomain: cfg.defaultDomain || '' } });
 });
 
-app.post('/api/config', async (req, res) => {
+app.post('/api/config', requireAdmin, async (req, res) => {
   try {
     const { accountId, apiToken, protocol, edgeIpVersion, defaultDomain } = req.body || {};
     if (accountId !== undefined || apiToken !== undefined) {
@@ -259,30 +260,61 @@ app.get('/api/zones', async (req, res) => {
 
 // ================= 隧道管理 =================
 
+// 归属校验：管理员可管理全部本机隧道；普通用户仅能操作自己创建的隧道
+// 返回本机隧道定义记录（不存在 = 其他设备创建的隧道，本机只读）
+function tunnelGuard(req, res, { needManage = true } = {}) {
+  const t = store.findTunnel(req.params.id);
+  if (!t) return null; // 调用方处理：可能是远端隧道
+  const u = currentUser(req);
+  if (needManage && u.role !== 'admin' && t.owner && t.owner !== u.username) {
+    res.status(403).json({ success: false, error: '只能操作自己创建的隧道' });
+    return false;
+  }
+  return t;
+}
+
 app.get('/api/tunnels', async (req, res) => {
   try {
     const s = await tunnelMgr.fullStatus();
+    const u = currentUser(req);
+    // 普通用户数据隔离：只能看到自己创建的隧道（其他设备隧道/他人隧道一律隐藏）
+    if (u.role !== 'admin') s.tunnels = s.tunnels.filter(t => t.isLocal && t.owner === u.username);
     res.json({ success: true, data: s });
   } catch (e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
 app.post('/api/tunnels', async (req, res) => {
   try {
+    const u = currentUser(req);
     const name = (req.body.name || '').trim();
+    const group = (req.body.group || '').trim().slice(0, 32);
     if (!/^[a-zA-Z0-9-]{1,64}$/.test(name)) return res.status(400).json({ success: false, error: '名称仅限字母/数字/连字符，最长 64 位' });
     const cfT = await cfd.createTunnel(name);
     const tunnels = store.getTunnels();
-    const rec = { id: 't_' + crypto.randomUUID(), cfId: cfT.id, name, autostart: true, createdAt: new Date().toISOString() };
+    const rec = {
+      id: 't_' + crypto.randomUUID(), cfId: cfT.id, name,
+      group, owner: u.username, hostName: os.hostname(),
+      autostart: true, createdAt: new Date().toISOString(),
+    };
     tunnels.push(rec);
     store.saveTunnels(tunnels);
     res.json({ success: true, data: rec });
   } catch (e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
+// 修改分组（管理员或创建者）
+app.patch('/api/tunnels/:id/meta', (req, res) => {
+  const t = tunnelGuard(req, res);
+  if (!t) return res.status(404).json({ success: false, error: '隧道不存在（其他设备创建的隧道无法在本机修改）' });
+  if (typeof (req.body || {}).group === 'string') t.group = req.body.group.trim().slice(0, 32);
+  store.saveTunnels(store.getTunnels());
+  res.json({ success: true, data: { group: t.group } });
+});
+
 app.delete('/api/tunnels/:id', async (req, res) => {
   try {
-    const t = store.findTunnel(req.params.id);
-    if (!t) return res.status(404).json({ success: false, error: '隧道不存在' });
+    const t = tunnelGuard(req, res);
+    if (!t) return res.status(404).json({ success: false, error: '隧道不存在（其他设备创建的隧道无法在本机删除）' });
     tunnelMgr.stopTunnel(t.id);
     await cfd.deleteTunnel(t.cfId);
     store.saveTunnels(store.getTunnels().filter(x => x.id !== t.id));
@@ -290,22 +322,23 @@ app.delete('/api/tunnels/:id', async (req, res) => {
   } catch (e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
+// 连接/断开/自启：只能操作本机隧道（进程跑在本机）
 app.post('/api/tunnels/:id/connect', async (req, res) => {
   try {
-    const t = store.findTunnel(req.params.id);
-    if (!t) return res.status(404).json({ success: false, error: '隧道不存在' });
+    const t = tunnelGuard(req, res);
+    if (!t) return res.status(400).json({ success: false, error: '该隧道由其他设备管理，请到对应设备的面板连接' });
     res.json({ success: true, data: await tunnelMgr.startTunnel(t.id) });
   } catch (e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
 app.post('/api/tunnels/:id/disconnect', (req, res) => {
-  const t = store.findTunnel(req.params.id);
-  if (!t) return res.status(404).json({ success: false, error: '隧道不存在' });
+  const t = tunnelGuard(req, res);
+  if (!t) return res.status(400).json({ success: false, error: '该隧道由其他设备管理' });
   res.json({ success: true, data: tunnelMgr.stopTunnel(t.id) });
 });
 
 app.post('/api/tunnels/:id/autostart', (req, res) => {
-  const t = store.findTunnel(req.params.id);
+  const t = tunnelGuard(req, res);
   if (!t) return res.status(404).json({ success: false, error: '隧道不存在' });
   t.autostart = !!(req.body && req.body.autostart);
   store.saveTunnels(store.getTunnels());
@@ -316,17 +349,22 @@ app.post('/api/tunnels/:id/autostart', (req, res) => {
 
 app.get('/api/tunnels/:id/rules', async (req, res) => {
   try {
+    // 管理员可查看任意隧道（含其他设备创建的，按 cfId 查）；普通用户仅限自己创建的
+    const u = currentUser(req);
     const t = store.findTunnel(req.params.id);
-    if (!t) return res.status(404).json({ success: false, error: '隧道不存在' });
-    const conf = await cfd.getTunnelConfig(t.cfId);
-    res.json({ success: true, data: { ingress: ((conf.config && conf.config.ingress) || []), tunnel: { id: t.id, name: t.name } } });
+    if (u.role !== 'admin') {
+      if (!t || t.owner !== u.username) return res.status(404).json({ success: false, error: '隧道不存在' });
+    }
+    const cfId = t ? t.cfId : req.params.id;
+    const conf = await cfd.getTunnelConfig(cfId);
+    res.json({ success: true, data: { ingress: ((conf.config && conf.config.ingress) || []), tunnel: { id: t ? t.id : cfId, name: t ? t.name : cfId } } });
   } catch (e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
 app.post('/api/tunnels/:id/rules', async (req, res) => {
   try {
-    const t = store.findTunnel(req.params.id);
-    if (!t) return res.status(404).json({ success: false, error: '隧道不存在' });
+    const t = tunnelGuard(req, res);
+    if (!t) return res.status(400).json({ success: false, error: '其他设备创建的隧道，规则请在对应设备上配置' });
     const { hostname, service, noTLSVerify, originServerName } = req.body || {};
     if (!hostname || !service) return res.status(400).json({ success: false, error: '域名与服务地址必填' });
     const dns = await cfd.ensureCname(hostname, t.cfId);
@@ -340,8 +378,8 @@ app.post('/api/tunnels/:id/rules', async (req, res) => {
 
 app.delete('/api/tunnels/:id/rules/:index', async (req, res) => {
   try {
-    const t = store.findTunnel(req.params.id);
-    if (!t) return res.status(404).json({ success: false, error: '隧道不存在' });
+    const t = tunnelGuard(req, res);
+    if (!t) return res.status(400).json({ success: false, error: '其他设备创建的隧道，规则请在对应设备上配置' });
     const idx = parseInt(req.params.index);
     const conf = await cfd.getTunnelConfig(t.cfId);
     const rules = ((conf.config && conf.config.ingress) || []).filter(r => r.hostname);
@@ -377,7 +415,7 @@ app.get('/api/system', (req, res) => {
   res.json({
     success: true,
     data: {
-      version: '1.1.0',
+      version: '1.2.0',
       platform: process.platform,
       node: process.version,
       uptimeSec: Math.floor(process.uptime()),

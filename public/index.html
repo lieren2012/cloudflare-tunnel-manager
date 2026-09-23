@@ -47,9 +47,9 @@
     </div>
     <nav>
       <a data-page="dashboard" class="active">🏠 首页</a>
-      <a data-page="config">⚙️ 系统配置</a>
+      <a data-page="config" id="navConfig">⚙️ 系统配置</a>
       <a data-page="tunnels">🌐 Tunnel 列表</a>
-      <a data-page="creds">🔑 API 凭证</a>
+      <a data-page="creds" id="navCreds">🔑 API 凭证</a>
       <a data-page="logs">📜 运行日志</a>
       <a data-page="users" id="navUsers" class="hidden">👥 用户管理</a>
       <a data-page="about">ℹ️ 关于</a>
@@ -171,11 +171,12 @@
     <section id="page-about" class="page">
       <h1>关于</h1>
       <div class="card">
-        <h3>CF Tunnel Manager v1.1.0</h3>
+        <h3>CF Tunnel Manager v1.2.0</h3>
         <p class="muted">参考「飞牛 Cloudflare Tunnel (NasPK)」重构的开源多隧道管理面板。</p>
         <ul class="muted small">
           <li>多隧道并行在线（原版仅支持单隧道）</li>
-          <li>多用户管理：首个注册者为管理员，后续注册需审核</li>
+          <li>多用户管理：首个注册者为管理员，后续注册需审核；普通用户仅能管理自己创建的隧道</li>
+          <li>设备识别：隧道绑定创建设备，同一账号多设备部署互不干扰；分组折叠展示</li>
           <li>默认域名 + 一键随机子域名</li>
           <li>Web 面板端口：<b>19090</b> ｜ 外部 API：<b>19092</b> ｜ MCP：<b>19093</b></li>
           <li>数据持久化目录：<b id="aboutData">/data</b></li>
@@ -191,7 +192,8 @@
   <div class="modal-card">
     <h3>新建 Tunnel</h3>
     <input id="newName" placeholder="隧道名称，如 home-nas（字母/数字/连字符）">
-    <p class="muted small">名称仅用于识别，不影响功能。</p>
+    <input id="newGroup" placeholder="分组（可选，如：服务器1 / 家庭 / 工作）" style="margin-top:8px">
+    <p class="muted small">名称仅用于识别，不影响功能。隧道创建后归属当前设备（<span id="modalDev"></span>）与当前账户。</p>
     <div class="btn-row">
       <button class="secondary" onclick="hideModal()">取消</button>
       <button onclick="createTunnel()">创建</button>
