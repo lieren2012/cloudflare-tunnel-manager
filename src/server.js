@@ -220,7 +220,7 @@ app.post('/api/config/regopen', requireAdmin, (req, res) => {
 
 app.get('/api/config', (req, res) => {
   const cfg = store.getConfig();
-  res.json({ success: true, data: { accountId: cfg.accountId, protocol: cfg.protocol, edgeIpVersion: cfg.edgeIpVersion, hasToken: !!cfg.apiToken, defaultDomain: cfg.defaultDomain || '' } });
+  res.json({ success: true, data: { accountId: cfg.accountId, protocol: cfg.protocol, edgeIpVersion: cfg.edgeIpVersion, hasToken: !!cfg.apiToken, defaultDomain: cfg.defaultDomain || '', deviceName: cfg.deviceName || '' } });
 });
 
 app.post('/api/config', requireAdmin, async (req, res) => {
@@ -237,6 +237,7 @@ app.post('/api/config', requireAdmin, async (req, res) => {
     if (['quic', 'http2'].includes(protocol)) patch.protocol = protocol;
     if (['4', '6', 'auto'].includes(edgeIpVersion)) patch.edgeIpVersion = edgeIpVersion;
     if (typeof defaultDomain === 'string') patch.defaultDomain = defaultDomain.trim();
+    if (typeof (req.body || {}).deviceName === 'string') patch.deviceName = req.body.deviceName.trim().slice(0, 32); // 本设备自定义显示名
     store.updateConfig(patch);
     res.json({ success: true });
   } catch (e) { res.status(400).json({ success: false, error: e.message }); }
@@ -300,6 +301,21 @@ app.post('/api/tunnels', async (req, res) => {
     store.saveTunnels(tunnels);
     res.json({ success: true, data: rec });
   } catch (e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// 批量重命名分组（管理员）：该组所有隧道一起改
+app.post('/api/tunnels/groups/rename', requireAdmin, (req, res) => {
+  const from = ((req.body || {}).from || '').trim();
+  const to = ((req.body || {}).to || '').trim().slice(0, 32);
+  if (!from) return res.status(400).json({ success: false, error: '缺少原分组名' });
+  const tunnels = store.getTunnels();
+  let n = 0;
+  for (const t of tunnels) {
+    const cur = t.group || '';
+    if (cur === from && cur !== to) { t.group = to; n++; }
+  }
+  if (n) store.saveTunnels(tunnels);
+  res.json({ success: true, data: { renamed: n } });
 });
 
 // 修改分组（管理员或创建者）

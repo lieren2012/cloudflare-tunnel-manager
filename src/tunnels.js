@@ -187,7 +187,7 @@ async function fullStatus() {
       local: def ? (local[def.id] || null) : null,
       defined: !!def,
       isLocal: !!def,
-      device: def ? (def.hostName || '本机') : null,
+      device: def ? (cfg.deviceName || def.hostName || '本机') : null,
       group: def ? (def.group || '') : '',
       owner: def ? (def.owner || '') : '',
       autostart: def ? def.autostart !== false : true,
@@ -196,10 +196,10 @@ async function fullStatus() {
   // 本地定义了但 CF 已删除的（僵尸）
   for (const t of defined) {
     if (!cfTunnels.find(x => x.id === t.cfId)) {
-      tunnels.push({ cfId: t.cfId, name: t.name, cfStatus: 'deleted', connections: 0, createdAt: null, online: !!local[t.id], local: local[t.id] || null, defined: true, isLocal: true, device: t.hostName || '本机', group: t.group || '', owner: t.owner || '', autostart: t.autostart !== false });
+      tunnels.push({ cfId: t.cfId, name: t.name, cfStatus: 'deleted', connections: 0, createdAt: null, online: !!local[t.id], local: local[t.id] || null, defined: true, isLocal: true, device: cfg.deviceName || t.hostName || '本机', group: t.group || '', owner: t.owner || '', autostart: t.autostart !== false });
     }
   }
-  return { configured: true, tunnels, deviceName: os.hostname() };
+  return { configured: true, tunnels, deviceName: cfg.deviceName || os.hostname() };
 }
 
 function getLogs(tunnelId) {

@@ -185,8 +185,9 @@ async function saveConfig() {
 }
 
 // ---------- Tunnel 列表 ----------
-let routesCache = {};      // cfId -> ingress 规则数组（null 表示获取失败）
-const collapsedGroups = new Set(); // 已折叠的分组名
+let routesCache = {};       // cfId -> ingress 规则数组（null 表示获取失败）
+let filterDev = 'local';    // 设备筛选：'local' 本机(默认) | '__remote__' 其他设备 | '' 全部
+let filterGrp = '';         // 分组筛选：'' 全部 | '__none__' 未分组 | 分组名
 
 async function refreshTunnels() {
   try {
@@ -204,6 +205,65 @@ async function refreshTunnels() {
   } catch (e) { $('#tunnelRows').innerHTML = `<tr><td colspan="7" class="err">加载失败: ${esc(e.message)}</td></tr>`; }
 }
 
+// ---------- 筛选条 ----------
+function chipHtml(label, active, onclick) {
+  return `<span class="fchip ${active ? 'active' : ''}" onclick="${onclick}">${esc(label)}</span>`;
+}
+
+function renderFilters() {
+  const admin = ME && ME.role === 'admin';
+  const localT = tunnelsCache.filter(t => t.isLocal);
+  const remoteT = tunnelsCache.filter(t => !t.isLocal);
+  const devName = window.panelDevice || '本机';
+  // 设备行
+  let h = `<span class="flabel">设备：</span>`
+        + chipHtml(`🏠 ${devName}`, filterDev === 'local', "setDevFilter('local')");
+  if (remoteT.length) h += chipHtml('☁️ 其他设备', filterDev === '__remote__', "setDevFilter('__remote__')");
+  h += chipHtml('全部', filterDev === '', "setDevFilter('')");
+  if (admin) h += `<a class="fedit" title="重命名本设备显示名" onclick="renameDevice()">✏️ 改名</a>`;
+  $('#devFilter').innerHTML = h;
+  // 分组行
+  const groups = [];
+  for (const t of localT) { const g = t.group || ''; if (!groups.includes(g)) groups.push(g); }
+  let gh = `<span class="flabel">分组：</span>`;
+  if (!groups.length) gh += `<span class="muted small">暂无（点击隧道名称下方的 📁 标签设置）</span>`;
+  for (const g of groups) {
+    const key = g || '__none__';
+    gh += chipHtml(g || '未分组', filterGrp === key, `setGrpFilter('${encodeURIComponent(key)}')`);
+  }
+  if (groups.length) gh += chipHtml('全部', filterGrp === '', "setGrpFilter('')");
+  if (admin && groups.some(g => g)) gh += `<a class="fedit" title="批量重命名某个分组" onclick="renameGroup()">✏️ 改名</a>`;
+  $('#grpFilter').innerHTML = gh;
+}
+
+function setDevFilter(v) { filterDev = v; renderTunnelRows(); }
+function setGrpFilter(v) { filterGrp = decodeURIComponent(v); renderTunnelRows(); }
+
+async function renameDevice() {
+  const cur = window.panelDevice || '';
+  const name = prompt(`给本设备起个显示名（当前：${cur || '未设置'}），如：设备1 / NAS3：`, cur);
+  if (name === null) return;
+  try {
+    await api('/config', { method: 'POST', body: { deviceName: name } });
+    window.panelDevice = name || cur;
+    renderTunnelRows();
+  } catch (e) { alert(e.message); }
+}
+
+async function renameGroup() {
+  const groups = [...new Set(tunnelsCache.filter(t => t.isLocal && t.group).map(t => t.group))];
+  if (!groups.length) return alert('还没有已命名的分组');
+  const from = prompt(`要重命名哪个分组？\n现有分组：${groups.join('、')}`, groups[0]);
+  if (!from || !groups.includes(from)) return;
+  const to = prompt(`「${from}」的新名称（留空则取消）：`, from);
+  if (to === null || !to.trim() || to.trim() === from) return;
+  try {
+    await api('/tunnels/groups/rename', { method: 'POST', body: { from, to: to.trim() } });
+    if (filterGrp === from) filterGrp = to.trim();
+    renderTunnelRows();
+  } catch (e) { alert(e.message); }
+}
+
 function routeCellHtml(t) {
   const routes = routesCache[t.cfId];
   if (routes === null) return '<span class="muted small">无法获取</span>';
@@ -212,7 +272,7 @@ function routeCellHtml(t) {
     const svc = /^https?:\/\//i.test(r.service)
       ? `<a href="${esc(r.service)}" target="_blank" rel="noopener" title="打开内网服务">${esc(r.service)}</a>`
       : `<span class="muted small">${esc(r.service)}</span>`;
-    return `<div class="route-line">🔗 <a href="https://${esc(r.hostname)}" target="_blank" rel="noopener" title="打开域名（HTTPS）">${esc(r.hostname)}</a><br><span class="muted small">↳</span> ${svc}</div>`;
+    return `<div class="route-line"><span class="rl">域名:</span> <a href="https://${esc(r.hostname)}" target="_blank" rel="noopener" title="打开（HTTPS）">${esc(r.hostname)}</a><br><span class="rl">本地:</span> ${svc}</div>`;
   }).join('');
 }
 
@@ -224,7 +284,7 @@ function tunnelRowHtml(t, i) {
     : ' <span class="tag ok" title="本机创建并运行的隧道">🏠 本机</span>';
   const ownerTag = admin && t.owner ? ` <span class="muted small">👤${esc(t.owner)}</span>` : '';
   const grpTag = !remote
-    ? `<a class="grp-tag" title="点击修改分组" onclick="editGroup('${t.cfId}', '${esc(t.group || '')}')">📁 ${t.group ? esc(t.group) : '未分组'}</a>`
+    ? `<a class="grp-tag" title="点击修改所属分组" onclick="editGroup('${t.cfId}', '${encodeURIComponent(t.group || '')}')">📁 ${t.group ? esc(t.group) : '未分组'}</a>`
     : '';
   const routeHtml = routeCellHtml(t);
   const actions = remote
@@ -247,39 +307,20 @@ function tunnelRowHtml(t, i) {
 }
 
 function renderTunnelRows() {
-  if (!tunnelsCache.length) {
-    $('#tunnelRows').innerHTML = '<tr><td colspan="7" class="muted" style="text-align:center;padding:24px">暂无 Tunnel，点击右上角「新建 Tunnel」</td></tr>';
-    return;
-  }
-  const admin = ME && ME.role === 'admin';
-  const localT = tunnelsCache.filter(t => t.isLocal);
-  const remoteT = tunnelsCache.filter(t => !t.isLocal);
-  const groups = [];
-  for (const t of localT) { const g = t.group || '未分组'; if (!groups.includes(g)) groups.push(g); }
-
-  const out = [];
-  for (const g of groups) {
-    const rows = localT.map((t, i) => ({ t, i })).filter(x => (x.t.group || '未分组') === g);
-    const folded = collapsedGroups.has(g);
-    out.push(`<tr class="group-head" onclick="toggleGroup('${esc(g)}')"><td colspan="7">${folded ? '▶' : '▼'} 📁 <b>${esc(g)}</b> <span class="muted small">(${rows.length})</span></td></tr>`);
-    if (!folded) for (const { t, i } of rows) out.push(tunnelRowHtml(t, i));
-  }
-  // 其他设备的隧道（仅管理员可见，只读展示）
-  if (admin && remoteT.length) {
-    const folded = collapsedGroups.has('__remote__');
-    out.push(`<tr class="group-head remote" onclick="toggleGroup('__remote__')"><td colspan="7">${folded ? '▶' : '▼'} ☁️ 其他设备的隧道 <span class="muted small">(${remoteT.length}，同一 Cloudflare 账号，仅可查看)</span></td></tr>`);
-    if (!folded) for (const { t, i } of remoteT.map((t, i) => ({ t, i }))) out.push(tunnelRowHtml(t, i));
-  }
-  $('#tunnelRows').innerHTML = out.join('');
+  renderFilters();
+  let list = tunnelsCache;
+  if (filterDev === 'local') list = list.filter(t => t.isLocal);
+  else if (filterDev === '__remote__') list = list.filter(t => !t.isLocal);
+  if (filterGrp === '__none__') list = list.filter(t => t.isLocal && !t.group);
+  else if (filterGrp) list = list.filter(t => t.isLocal && t.group === filterGrp);
+  $('#tunnelRows').innerHTML = list.length
+    ? list.map((t, i) => tunnelRowHtml(t, i)).join('')
+    : '<tr><td colspan="7" class="muted" style="text-align:center;padding:24px">当前筛选条件下没有隧道（点上方「全部」查看更多）</td></tr>';
 }
 
-function toggleGroup(g) {
-  collapsedGroups.has(g) ? collapsedGroups.delete(g) : collapsedGroups.add(g);
-  renderTunnelRows();
-}
-
-async function editGroup(cfId, cur) {
-  const g = prompt('分组名称（留空表示移出分组）：', cur || '');
+async function editGroup(cfId, encGroup) {
+  const cur = decodeURIComponent(encGroup || '');
+  const g = prompt('分组名称（留空表示移出分组）：', cur);
   if (g === null) return;
   try { await api(`/tunnels/${cfId}/meta`, { method: 'PATCH', body: { group: g } }); } catch (e) { alert(e.message); }
   refreshTunnels();
