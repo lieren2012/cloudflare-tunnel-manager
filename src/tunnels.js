@@ -171,23 +171,26 @@ async function fullStatus() {
   const cfTunnels = await cfd.listTunnels(); // [{id,name,status,connections,...}]
   const local = localStatus();
   const defined = store.getTunnels();
-  const definedIds = new Set(defined.map(t => t.cfId));
 
-  const tunnels = cfTunnels.map(t => ({
-    cfId: t.id,
-    name: t.name,
-    cfStatus: t.status, // healthy | degraded | down | inactive
-    connections: (t.connections || []).length,
-    createdAt: t.created_at,
-    online: !!local[t.id],
-    local: local[t.id] || null,
-    defined: definedIds.has(t.id),
-    autostart: (defined.find(x => x.cfId === t.id) || {}).autostart !== false,
-  }));
+  const tunnels = cfTunnels.map(t => {
+    // 本地进程表以内部 id（t_xxx）为 key，需先由 cfId 映射到内部 id 再查在线状态
+    const def = defined.find(x => x.cfId === t.id);
+    return {
+      cfId: t.id,
+      name: t.name,
+      cfStatus: t.status, // healthy | degraded | down | inactive
+      connections: (t.connections || []).length,
+      createdAt: t.created_at,
+      online: def ? !!local[def.id] : false,
+      local: def ? (local[def.id] || null) : null,
+      defined: !!def,
+      autostart: def ? def.autostart !== false : true,
+    };
+  });
   // 本地定义了但 CF 已删除的（僵尸）
   for (const t of defined) {
     if (!cfTunnels.find(x => x.id === t.cfId)) {
-      tunnels.push({ cfId: t.cfId, name: t.name, cfStatus: 'deleted', connections: 0, createdAt: null, online: !!local[t.cfId], local: local[t.cfId] || null, defined: true, autostart: t.autostart !== false });
+      tunnels.push({ cfId: t.cfId, name: t.name, cfStatus: 'deleted', connections: 0, createdAt: null, online: !!local[t.id], local: local[t.id] || null, defined: true, autostart: t.autostart !== false });
     }
   }
   return { configured: true, tunnels };
