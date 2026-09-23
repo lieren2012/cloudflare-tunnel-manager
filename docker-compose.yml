@@ -1,0 +1,18 @@
+services:
+  cf-tunnel-manager:
+    image: cf-tunnel-manager:latest
+    build: .
+    container_name: cf-tunnel-manager
+    restart: unless-stopped
+    network_mode: host          # 让 cloudflared 直接访问宿主机内网服务（NAS 最简方式）
+    environment:
+      - TZ=Asia/Shanghai
+      # 管理面板登录密码（留空则不启用登录认证，仅建议内网使用）
+      - ADMIN_PASSWORD=
+    volumes:
+      - ./data:/data
+    # 如果不使用 host 网络，请改用 ports 映射，并把下面服务的地址改为宿主机 IP：
+    # ports:
+    #   - "19090:19090"   # Web 管理面板
+    #   - "19092:19092"   # 外部 RESTful API
+    #   - "19093:19093"   # MCP 服务

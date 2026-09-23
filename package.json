@@ -1,0 +1,16 @@
+{
+  "name": "cf-tunnel-manager",
+  "version": "1.0.0",
+  "description": "Cloudflare Tunnel 多隧道管理面板（单容器多隧道并行在线）",
+  "main": "src/server.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node src/server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "express": "^4.19.2"
+  }
+}

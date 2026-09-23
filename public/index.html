@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cloudflare Tunnel 管理面板</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="loginView" class="login-view hidden">
+  <div class="login-card">
+    <h2>🔐 管理面板</h2>
+    <p class="muted">请输入管理密码</p>
+    <input type="password" id="loginPwd" placeholder="管理密码">
+    <button onclick="doLogin()">登 录</button>
+    <p id="loginErr" class="err"></p>
+  </div>
+</div>
+
+<div id="app" class="layout hidden">
+  <aside class="sidebar">
+    <div class="logo">
+      <span class="logo-icon">☁️</span>
+      <div><b>Cloudflare Tunnel</b><small>多隧道并行管理</small></div>
+    </div>
+    <nav>
+      <a data-page="dashboard" class="active">🏠 首页</a>
+      <a data-page="config">⚙️ 系统配置</a>
+      <a data-page="tunnels">🌐 Tunnel 列表</a>
+      <a data-page="creds">🔑 API 凭证</a>
+      <a data-page="logs">📜 运行日志</a>
+      <a data-page="about">ℹ️ 关于</a>
+    </nav>
+    <div class="sidebar-foot" id="onlineCount"></div>
+  </aside>
+
+  <main class="main">
+    <!-- 首页 -->
+    <section id="page-dashboard" class="page">
+      <h1>运行状态</h1>
+      <div class="stat-cards">
+        <div class="card"><div class="stat" id="statOnline">-</div><div class="stat-label">在线隧道</div></div>
+        <div class="card"><div class="stat" id="statTotal">-</div><div class="stat-label">隧道总数</div></div>
+        <div class="card"><div class="stat" id="statUptime">-</div><div class="stat-label">面板运行时长</div></div>
+        <div class="card"><div class="stat" id="statConns">-</div><div class="stat-label">边缘连接数</div></div>
+      </div>
+      <h2>隧道一览</h2>
+      <div id="dashTunnels" class="tunnel-cards"></div>
+      <p class="muted" id="dashHint"></p>
+    </section>
+
+    <!-- 系统配置 -->
+    <section id="page-config" class="page">
+      <h1>系统配置</h1>
+      <div class="card form-card">
+        <h3>Cloudflare 账号</h3>
+        <label>账号 ID（Account ID）<input id="cfgAccount" placeholder="Cloudflare Account ID"></label>
+        <label>API 令牌（API Token）<input id="cfgToken" type="password" placeholder="留空表示不修改已保存的令牌"></label>
+        <p class="muted">令牌需授予 <b>Cloudflare Tunnel（读取+编辑）</b> 与 <b>DNS（读取+编辑）</b> 权限。</p>
+        <h3>连接参数</h3>
+        <label>连接协议
+          <select id="cfgProtocol">
+            <option value="quic">QUIC（默认，延迟更低）</option>
+            <option value="http2">HTTP/2（兼容性最好）</option>
+          </select>
+        </label>
+        <label>边缘节点 IP 版本
+          <select id="cfgEdge">
+            <option value="4">IPv4（最稳定）</option>
+            <option value="6">IPv6（有原生 IPv6 时延迟更优）</option>
+          </select>
+        </label>
+        <div class="btn-row">
+          <button class="secondary" onclick="testConfig()">测试配置</button>
+          <button onclick="saveConfig()">保存配置</button>
+        </div>
+        <p id="cfgMsg" class="msg"></p>
+      </div>
+    </section>
+
+    <!-- Tunnel 列表 -->
+    <section id="page-tunnels" class="page">
+      <div class="page-head">
+        <h1>Tunnel 列表</h1>
+        <button onclick="showCreate()">＋ 新建 Tunnel</button>
+      </div>
+      <div class="banner ok">✅ 本面板支持 <b>多条隧道同时在线</b>，互不影响，按需连接/断开。</div>
+      <table class="tbl" id="tunnelTable">
+        <thead><tr><th>名称</th><th>云端状态</th><th>本地进程</th><th>运行时长</th><th>自启</th><th>操作</th></tr></thead>
+        <tbody id="tunnelRows"></tbody>
+      </table>
+    </section>
+
+    <!-- API 凭证 -->
+    <section id="page-creds" class="page">
+      <div class="page-head">
+        <h1>API 凭证</h1>
+        <button onclick="createCred()">＋ 新建凭证</button>
+      </div>
+      <div class="card">
+        <p class="muted">外部应用 / AI 智能体通过以下方式集成：</p>
+        <ul class="muted small">
+          <li>RESTful API：<code>http://&lt;NAS IP&gt;:19092/api/v1</code>（请求头 <code>X-API-Key</code>）</li>
+          <li>MCP 服务：<code>http://&lt;NAS IP&gt;:19093/mcp</code>（Streamable HTTP，同样使用 <code>X-API-Key</code>）</li>
+        </ul>
+      </div>
+      <table class="tbl">
+        <thead><tr><th>名称</th><th>API Key</th><th>创建时间</th><th>操作</th></tr></thead>
+        <tbody id="credRows"></tbody>
+      </table>
+    </section>
+
+    <!-- 运行日志 -->
+    <section id="page-logs" class="page">
+      <div class="page-head">
+        <h1>运行日志</h1>
+        <div class="btn-row">
+          <input id="logFilter" placeholder="关键字过滤…" oninput="renderLogs()">
+          <label class="chk"><input type="checkbox" id="logAuto" checked onchange="autoLog()"> 自动刷新</label>
+        </div>
+      </div>
+      <select id="logTunnel" onchange="renderLogs()" class="sel-inline"></select>
+      <pre id="logView" class="log-view">加载中…</pre>
+    </section>
+
+    <!-- 关于 -->
+    <section id="page-about" class="page">
+      <h1>关于</h1>
+      <div class="card">
+        <h3>CF Tunnel Manager v1.0.0</h3>
+        <p class="muted">参考「飞牛 Cloudflare Tunnel (NasPK)」重构的开源多隧道管理面板。</p>
+        <ul class="muted small">
+          <li>单容器多隧道并行在线（原版仅支持单隧道）</li>
+          <li>Web 面板端口：<b>19090</b> ｜ 外部 API：<b>19092</b> ｜ MCP：<b>19093</b></li>
+          <li>数据持久化目录：<b id="aboutData">/data</b></li>
+          <li>凭据加密保存于本地，不会上传到任何第三方服务器</li>
+        </ul>
+      </div>
+    </section>
+  </main>
+</div>
+
+<!-- 新建 Tunnel 弹窗 -->
+<div id="modal" class="modal hidden">
+  <div class="modal-card">
+    <h3>新建 Tunnel</h3>
+    <input id="newName" placeholder="隧道名称，如 home-nas（字母/数字/连字符）">
+    <p class="muted small">名称仅用于识别，不影响功能。</p>
+    <div class="btn-row">
+      <button class="secondary" onclick="hideModal()">取消</button>
+      <button onclick="createTunnel()">创建</button>
+    </div>
+    <p id="modalMsg" class="msg"></p>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
