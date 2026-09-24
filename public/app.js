@@ -154,6 +154,7 @@ async function loadConfig() {
   try {
     const { data } = await api('/config');
     cfgCache = data;
+    cfgLoaded = true;
     $('#cfgAccount').value = data.accountId || '';
     $('#cfgProtocol').value = data.protocol || 'quic';
     $('#cfgEdge').value = data.edgeIpVersion || '4';
@@ -358,13 +359,20 @@ function randomPrefix() {
   const w = () => RAND_WORDS[Math.floor(Math.random() * RAND_WORDS.length)];
   return `${w()}-${w()}-${Math.floor(Math.random() * 90 + 10)}`;
 }
+// 确保配置已加载（普通用户不看系统配置页，打开规则弹窗时需补拉默认域名）
+let cfgLoaded = false;
+async function ensureCfg() {
+  if (cfgLoaded) return;
+  try { const { data } = await api('/config'); cfgCache = Object.assign({}, cfgCache, data); cfgLoaded = true; } catch (_) {}
+}
 function randHost() {
-  const domain = ($('#cfgDomain').value || cfgCache.defaultDomain || '').trim();
-  if (!domain) { $('#ruleMsg').textContent = '请先在「系统配置」中设置默认域名'; $('#ruleMsg').className = 'msg err'; return; }
+  const domain = (($('#cfgDomain') && $('#cfgDomain').value) || cfgCache.defaultDomain || '').trim();
+  if (!domain) { $('#ruleMsg').textContent = '管理员尚未在「系统配置」中设置默认域名'; $('#ruleMsg').className = 'msg err'; return; }
   $('#ruleHost').value = `${randomPrefix()}.${domain}`;
 }
 async function showRules(id) {
   try {
+    await ensureCfg();
     const { data } = await api(`/tunnels/${id}/rules`);
     const rules = (data.ingress || []).filter(r => r.hostname);
     const domain = $('#cfgDomain').value || cfgCache.defaultDomain || '';
