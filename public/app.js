@@ -465,6 +465,7 @@ async function loadUsers() {
         <td><b>${esc(u.username)}</b></td>
         <td>${u.role === 'admin' ? '<span class="tag warn">管理员</span>' : '普通用户'}</td>
         <td><span class="tag ${st[0]}">${st[1]}</span></td>
+        <td class="remark-cell"><a class="grp-tag" title="点击编辑备注" onclick="editRemark('${u.id}', '${encodeURIComponent(u.remark || '')}')">${u.remark ? '📝 ' + esc(u.remark) : '＋ 添加备注'}</a></td>
         <td class="muted">${esc((u.createdAt || '').slice(0, 19).replace('T', ' '))}</td>
         <td>${ops.join(' ')}</td></tr>`;
     }).join('');
@@ -476,6 +477,13 @@ async function loadUsers() {
 }
 async function userAct(id, action) {
   try { await api(`/users/${id}/${action}`, { method: 'POST' }); } catch (e) { alert(e.message); }
+  loadUsers();
+}
+async function editRemark(id, encRemark) {
+  const cur = decodeURIComponent(encRemark || '');
+  const r = prompt('用户备注（仅管理员可见，留空则清除）：', cur);
+  if (r === null) return;
+  try { await api(`/users/${id}/remark`, { method: 'PATCH', body: { remark: r } }); } catch (e) { alert(e.message); }
   loadUsers();
 }
 async function userDel(id, name) {

@@ -151,10 +151,20 @@ app.use('/api', (req, res, next) => {
 
 // ---- 用户管理（管理员） ----
 
-function sanitizeUser(u) { return { id: u.id, username: u.username, role: u.role, status: u.status, createdAt: u.createdAt }; }
+function sanitizeUser(u) { return { id: u.id, username: u.username, role: u.role, status: u.status, createdAt: u.createdAt, remark: u.remark || '' }; }
 
 app.get('/api/users', requireAdmin, (req, res) => {
   res.json({ success: true, data: store.getUsers().map(sanitizeUser) });
+});
+
+// 备注（仅管理员可见，不影响用户本身）
+app.patch('/api/users/:id/remark', requireAdmin, (req, res) => {
+  const users = store.getUsers();
+  const u = users.find(x => x.id === req.params.id);
+  if (!u) return res.status(404).json({ success: false, error: '用户不存在' });
+  u.remark = String((req.body || {}).remark || '').trim().slice(0, 64);
+  store.saveUsers(users);
+  res.json({ success: true, data: { remark: u.remark } });
 });
 
 // 管理员直接添加（免审核）
