@@ -46,6 +46,32 @@ docker compose up -d --build
 - 数据（凭据/配置/凭证）持久化在 `./data/`
 - 设置环境变量 `ADMIN_PASSWORD` 可开启面板登录（默认关闭，建议仅内网使用）
 
+## 检查并更新
+
+**一键更新（推荐）**——在项目目录执行，自动检查新版本 → 拉取 → 重建：
+
+```bash
+bash update.sh
+```
+
+或者直接用命令（效果相同）：
+
+```bash
+cd cloudflare-tunnel-manager && git fetch origin && git reset --hard origin/main && git log --oneline -1 && docker compose up -d --build && docker image prune -f
+```
+
+**只检查不更新**（看看有没有新版）：
+
+```bash
+cd cloudflare-tunnel-manager && git fetch origin -q && git log --oneline HEAD..origin/main
+```
+
+- 有输出 = 有新版本（列出的就是待更新提交）
+- 无输出 = 已是最新
+
+> `git reset --hard` 只重置代码文件，`./data/` 里的凭据、用户、隧道配置不受影响（它不在 git 里）。
+> 更新完浏览器按 `Ctrl + F5` 强刷，确保加载到新的前端页面。
+
 ## 前置准备
 
 1. 一个已托管到 Cloudflare 的域名
