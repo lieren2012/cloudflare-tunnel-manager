@@ -4,3 +4,7 @@ data/
 *.log
 .DS_Store
 Thumbs.db
+
+# 文档站构建产物与缓存
+docs/.vitepress/dist/
+docs/.vitepress/cache/

@@ -1,3 +1,8 @@
+---
+title: 获取 Cloudflare 凭据
+description: 3 步拿到 Account ID 与 API Token，只给 Cloudflare Tunnel 和 DNS 两条权限
+---
+
 # 获取 Cloudflare Account ID 与 API Token（3 步，1 分钟）
 
 面板只需要两样东西：**Account ID**（账号编号）和 **API Token**（带隧道权限的令牌）。照着下面点一遍就行，不需要看懂 Cloudflare 的其他功能。

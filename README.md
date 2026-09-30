@@ -4,7 +4,9 @@
 
 > 核心增强：**单容器支持多条隧道同时在线**（原版同时只能连 1 条），互不影响、独立启停、异常自动重连。
 
-📖 **[获取 Cloudflare 凭据教程（3 步，1 分钟）](docs/get-credentials.md)** —— 第一次用先看这个。
+📖 **在线文档：<https://lieren2012.github.io/cloudflare-tunnel-manager/>** —— 部署、使用、更新、安全，全在里面。
+
+第一次用先看：**[获取 Cloudflare 凭据（3 步，1 分钟）](docs/get-credentials.md)** → **[快速开始](https://lieren2012.github.io/cloudflare-tunnel-manager/guide/)**
 
 ## 功能
 
@@ -185,6 +187,23 @@ AI 客户端（如 WorkBuddy）可通过 MCP 接入：
 
 Node.js 22 + Express，前端原生单页（无构建步骤），cloudflared 由 Docker 多阶段构建内置（alpine）。
 非 Docker 运行需自行安装 cloudflared（或设 `CLOUDFLARED_PATH`）。
+
+## 文档站（VitePress）
+
+在线版：<https://lieren2012.github.io/cloudflare-tunnel-manager/>
+
+文档源码在 `docs/`，用 VitePress 构建，**推送到 `main` 后由 GitHub Actions 自动部署**到 GitHub Pages（见 `.github/workflows/docs.yml`）。
+
+本地预览 / 构建：
+
+```bash
+npm install
+npm run docs:dev      # 本地预览（默认 http://localhost:5173）
+npm run docs:build    # 构建到 docs/.vitepress/dist
+npm run docs:preview  # 预览构建产物
+```
+
+> 文档站是独立的静态站点，**不参与 Docker 镜像构建**（`vitepress` 在 `devDependencies` 里，镜像安装依赖用 `--omit=dev`）。
 
 ## ⚠️ 安全须知
 
