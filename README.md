@@ -79,7 +79,7 @@ docker compose up -d --build
 
 > ⚠️ **首次启用需要手动更新一次**：旧版本容器内没有源码挂载与新镜像，需先执行一次下面「方式二」，之后就能一直在面板里更新了。
 >
-> **更新源自动切换（默认内置，无需配置）**：检测更新时先直连 GitHub（25 秒快速失败），失败后自动依次尝试内置镜像 `v4.gh-proxy.org` → `gh-proxy.com` → `ghfast.top`，成功的镜像会被记住，下次优先使用。也可在「关于」页的「更新源设置」里**固定指定**某个镜像（下拉选择或自定义加速前缀），或填 **Git 代理**（如 `http://192.168.1.2:7890`）。
+> **更新源自动切换（默认内置，无需配置）**：检测更新时先直连 GitHub（25 秒快速失败），失败后自动依次尝试内置镜像 `v4.gh-proxy.org` → `gh-proxy.com` → `ghfast.top`，成功的镜像会被记住，下次优先使用。所有 git 网络操作均以 HTTP/1.1 发起，可规避国内常见的 `HTTP/2 stream was not closed cleanly` 报错。也可在「关于」页的「更新源设置」里**固定指定**某个镜像（下拉选择或自定义加速前缀），或填 **Git 代理**（如 `http://192.168.1.2:7890`）。
 >
 > 更新记录了回退信息：若新版启动异常，可在 NAS 上 `git reset --hard <更新前的提交>` 后重建容器（更新日志里能看到该提交号）。
 
@@ -91,16 +91,24 @@ docker compose up -d --build
 bash update.sh
 ```
 
+脚本会**先直连 GitHub，失败自动依次切换内置镜像**（`v4.gh-proxy.org` → `gh-proxy.com` → `ghfast.top`），全部走 HTTP/1.1，无需你操心网络问题。
+
 或者直接用命令（效果相同）：
 
 ```bash
-cd cloudflare-tunnel-manager && git fetch origin && git reset --hard origin/main && git log --oneline -1 && docker compose up -d --build && docker image prune -f
+cd cloudflare-tunnel-manager && git -c http.version=HTTP/1.1 fetch origin && git reset --hard origin/main && docker compose up -d --build && docker image prune -f
+```
+
+**直连报 `HTTP/2 stream 1 was not closed cleanly` 或 `Failed to connect to github.com`** → 用镜像版本：
+
+```bash
+cd cloudflare-tunnel-manager && git -c http.version=HTTP/1.1 fetch https://v4.gh-proxy.org/https://github.com/lieren2012/cloudflare-tunnel-manager.git main && git reset --hard FETCH_HEAD && docker compose up -d --build && docker image prune -f
 ```
 
 ### 只检查不更新
 
 ```bash
-cd cloudflare-tunnel-manager && git fetch origin -q && git log --oneline HEAD..origin/main
+cd cloudflare-tunnel-manager && git -c http.version=HTTP/1.1 fetch origin -q && git log --oneline HEAD..origin/main
 ```
 
 - 有输出 = 有新版本（列出的就是待更新提交）

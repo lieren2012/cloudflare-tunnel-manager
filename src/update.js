@@ -67,10 +67,15 @@ function tailLog(n = 40) {
   } catch (_) { return []; }
 }
 
+// 全局 git 覆盖项：
+//   http.version=HTTP/1.1 —— 规避国内网络常见的「HTTP/2 stream 1 was not closed cleanly」报错
+//   http.postBuffer      —— 大包传输更稳，减少 RPC failed / broken pipe
+const GIT_OPTS = ['-c', 'http.version=HTTP/1.1', '-c', 'http.postBuffer=524288000'];
+
 /** 执行 git 子命令（execFile，不经 shell，参数不会被注入） */
 function git(args, timeout = 30000) {
   return new Promise((resolve) => {
-    execFile('git', args, {
+    execFile('git', [...GIT_OPTS, ...args], {
       cwd: APP_DIR,
       timeout,
       maxBuffer: 8 * 1024 * 1024,
