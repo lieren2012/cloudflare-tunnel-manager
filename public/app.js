@@ -620,7 +620,13 @@ async function refreshUpdStatus() {
   try {
     const { data } = await api('/update/status');
     updStatus = data;
-    $('#abMirror').value = (data.sources && data.sources.gitMirror) || '';
+    const sel = $('#abMirrorSel');
+    const mirror = (data.sources && data.sources.gitMirror) || '';
+    if (!mirror) sel.value = '';
+    else if ([...sel.options].some(o => o.value === mirror)) sel.value = mirror;
+    else sel.value = '__custom__';
+    $('#abMirrorCustom').classList.toggle('hidden', sel.value !== '__custom__');
+    $('#abMirror').value = mirror;
     $('#abProxy').value = (data.sources && data.sources.gitProxy) || '';
     renderUpdBox();
     renderUpdLog();
@@ -628,6 +634,14 @@ async function refreshUpdStatus() {
     $('#abUpdBox').innerHTML = `<span class="err">读取更新状态失败：${esc(e.message)}</span>`;
   }
 }
+
+// 更新源下拉：选「自定义」时展开前缀输入框
+function onMirrorSelChange() {
+  const sel = $('#abMirrorSel');
+  $('#abMirrorCustom').classList.toggle('hidden', sel.value !== '__custom__');
+  if (sel.value === '__custom__') $('#abMirror').focus();
+}
+$('#abMirrorSel').addEventListener('change', onMirrorSelChange);
 
 function renderUpdBox() {
   const d = updStatus || {};
@@ -653,15 +667,16 @@ function renderUpdBox() {
   html += `<p class="muted small">跟踪分支 <code>${esc(d.branch || '-')}</code>${d.remote ? ' · 仓库 <code>' + esc(d.remote) + '</code>' : ''}</p>`;
   if (d.localChanges) html += `<p class="muted small">⚠️ 服务器上有 ${d.localChanges} 个代码文件被改动过，更新时会被覆盖（data/ 不受影响）。</p>`;
 
+  const viaLine = c && c.via ? `<p class="muted small">本次检测经 <b>${esc(c.via)}</b> 完成${(updStatus.sources && updStatus.sources.lastGood && !updStatus.sources.gitMirror) ? '（已记住，下次优先使用）' : ''}。</p>` : '';
   const c = d.check;
   if (!c) {
-    html += '<p class="msg">尚未检测过更新，点击「检测更新」连接更新源。</p>';
+    html += '<p class="msg">尚未检测过更新，点击「检测更新」连接更新源（直连失败会自动切换内置镜像）。</p>';
     setUpdateBadge(false);
   } else if (c.error) {
-    html += `<div class="banner err">❌ ${esc(c.error)}<br><span class="small">可在下方「更新源设置」填入加速前缀或代理后重试。</span></div>`;
+    html += `<div class="banner err">❌ ${esc(c.error).replace(/\n/g, '<br>')}<br><span class="small">可在下方「更新源设置」改用其他镜像或代理后重试。</span></div>`;
     setUpdateBadge(false);
   } else if (c.hasUpdate) {
-    html += `<div class="banner warn">⬆️ 发现新版本${c.latestVersion ? ' <b>v' + esc(c.latestVersion) + '</b>' : ''}，落后 <b>${c.behind}</b> 个提交。</div>`;
+    html += `<div class="banner warn">⬆️ 发现新版本${c.latestVersion ? ' <b>v' + esc(c.latestVersion) + '</b>' : ''}，落后 <b>${c.behind}</b> 个提交。</div>` + viaLine;
     if (c.commits && c.commits.length) {
       html += '<div class="upd-commits">' + c.commits.map(l => `<div>${esc(l)}</div>`).join('') + '</div>';
     }
@@ -670,7 +685,7 @@ function renderUpdBox() {
     applyBtn.textContent = '⬆️ 更新到最新版';
     setUpdateBadge(true);
   } else {
-    html += `<p class="msg ok">✅ 已是最新版本（检测于 ${esc(fmtTime(c.checkedAt))}）</p>`;
+    html += `<p class="msg ok">✅ 已是最新版本（检测于 ${esc(fmtTime(c.checkedAt))}）</p>` + viaLine;
     setUpdateBadge(false);
   }
   box.innerHTML = html;
@@ -773,7 +788,9 @@ async function saveUpdSrc() {
   m.textContent = '保存中…';
   m.className = 'msg small';
   try {
-    await api('/config', { method: 'POST', body: { gitMirror: $('#abMirror').value, gitProxy: $('#abProxy').value } });
+    const sel = $('#abMirrorSel').value;
+    const mirror = sel === '__custom__' ? $('#abMirror').value : sel;
+    await api('/config', { method: 'POST', body: { gitMirror: mirror, gitProxy: $('#abProxy').value } });
     m.textContent = '✅ 已保存';
     m.className = 'msg small ok';
     cfgLoaded = false;

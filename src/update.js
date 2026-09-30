@@ -20,6 +20,16 @@ const BRANCH = process.env.GIT_BRANCH || 'main';
 const LOG_FILE = path.join(store.DATA_DIR, 'update.log');
 const FETCH_TIMEOUT = 180000; // 国内直连 GitHub 可能较慢
 
+// 内置公共加速镜像：未手动指定加速前缀时，直连失败会自动依次尝试
+// （都是只读的 GitHub 反代，仅用于 git fetch，凭据不会经过它们）
+const BUILTIN_MIRRORS = [
+  { name: 'gh-proxy.org（毫秒镜像）', url: 'https://v4.gh-proxy.org/' },
+  { name: 'gh-proxy.com（毫秒镜像）', url: 'https://gh-proxy.com/' },
+  { name: 'ghfast.top', url: 'https://ghfast.top/' },
+];
+const DIRECT_TIMEOUT = 25000;   // 直连先快速试一次，失败马上换镜像
+const MIRROR_TIMEOUT = 120000;  // 每个镜像的拉取超时
+
 const state = {
   phase: 'idle',      // idle | running | restarting | error
   startedAt: null,
@@ -138,8 +148,22 @@ function fetchUrlOf(remote, mirror) {
 
 // ---------- 检测更新 ----------
 
+/** 找一个镜像的显示名（内置的用中文名，自定义/历史记录用简短标注） */
+function mirrorName(url) {
+  const u = String(url || '').trim();
+  if (!u) return '直连 GitHub';
+  const hit = BUILTIN_MIRRORS.find(m => m.url === u);
+  return hit ? hit.name : u.replace(/^https?:\/\//, '').replace(/\/$/, '');
+}
+
 /**
  * 检测是否有新版本（会真的向更新源 fetch，耗时取决于网络）
+ *
+ * 更新源策略（自动兜底）：
+ *   - 手动指定了「Git 加速前缀」→ 优先用它，失败后仍会尝试内置镜像兜底
+ *   - 否则：直连 GitHub 先试（25s 快速失败）→ 上次成功的镜像 → 内置镜像逐个尝试
+ *   - 成功的镜像记入 config.lastGoodMirror，下次优先使用
+ *
  * @returns {Promise<object>} 统一的检测结果对象
  */
 async function check() {
@@ -149,16 +173,43 @@ async function check() {
   if (!info.remote) return { ...info, checkedAt, error: '未配置 git 远端（origin），无法检测更新。' };
 
   const cfg = store.getConfig();
-  const url = fetchUrlOf(info.remote, cfg.gitMirror);
-  writeLog(`[check] fetch ${url} (${info.branch})`);
-  const f = await git([...proxyArgs(cfg), 'fetch', '--quiet', '--force', url, info.branch], FETCH_TIMEOUT);
-  if (!f.ok) {
-    const error = `连接更新源失败：${f.err}`;
+  const manualMirror = String(cfg.gitMirror || '').trim();
+  const lastGood = String(cfg.lastGoodMirror || '').trim();
+
+  let candidates;
+  if (manualMirror) {
+    candidates = [{ name: `自定义加速前缀 ${mirrorName(manualMirror)}`, url: manualMirror },
+      ...BUILTIN_MIRRORS.filter(m => m.url !== manualMirror).map(m => ({ name: m.name, url: m.url }))];
+  } else {
+    candidates = [{ name: '直连 GitHub', url: '' }];
+    if (lastGood) candidates.push({ name: `上次成功的镜像 ${mirrorName(lastGood)}`, url: lastGood });
+    for (const m of BUILTIN_MIRRORS) {
+      if (m.url !== lastGood) candidates.push({ name: m.name, url: m.url });
+    }
+  }
+
+  let f = null;
+  let via = null;
+  const tried = [];
+  for (const cand of candidates) {
+    const url = fetchUrlOf(info.remote, cand.url);
+    const timeout = cand.url ? MIRROR_TIMEOUT : DIRECT_TIMEOUT;
+    writeLog(`[check] 尝试 ${cand.name} → ${url} (${info.branch})`);
+    f = await git([...proxyArgs(cfg), 'fetch', '--quiet', '--force', url, info.branch], timeout);
+    if (f.ok) { via = cand; break; }
+    const line = String(f.err || '').split('\n')[0].slice(0, 160);
+    tried.push(`${cand.name}：${line}`);
+    writeLog(`[check] ${cand.name} 失败：${line}`);
+  }
+
+  if (!f || !f.ok) {
+    const error = `连接更新源失败（已尝试 ${tried.length} 个更新源）：\n${tried.join('\n')}`;
     writeLog(`[check] ${error}`);
     const result = { ...info, checkedAt, fetchFailed: true, error };
     saveCache(result);
     return result;
   }
+  if (via && via.url) store.updateConfig({ lastGoodMirror: via.url }); // 记住可用的镜像
 
   const cnt = await git(['rev-list', '--count', 'HEAD..FETCH_HEAD'], 15000);
   const behind = cnt.ok ? (parseInt(cnt.out || '0', 10) || 0) : 0;
@@ -188,6 +239,7 @@ async function check() {
     commits,
     latest,
     latestVersion,
+    via: via ? via.name : '直连 GitHub',
     localChanges: await localChanges(),
     checkedAt,
     error: '',
@@ -208,6 +260,7 @@ function saveCache(r) {
       latestShort: r.latest ? r.latest.short : '',
       latestSubject: r.latest ? r.latest.subject : '',
       version: r.version || '',
+      via: r.via || '',
       error: r.error || '',
       supported: !!r.supported,
     },
@@ -303,7 +356,13 @@ async function getStatus() {
     to: state.to,
     error: state.error,
     startedAt: state.startedAt,
-    sources: { gitMirror: cfg.gitMirror || '', gitProxy: cfg.gitProxy || '' },
+    sources: {
+      gitMirror: cfg.gitMirror || '',
+      gitProxy: cfg.gitProxy || '',
+      lastGood: cfg.lastGoodMirror || '',
+      lastGoodName: mirrorName(cfg.lastGoodMirror),
+      builtins: BUILTIN_MIRRORS,
+    },
     check: cfg.updateCache || null,
     log: tailLog(40),
   };
@@ -313,7 +372,7 @@ async function getStatus() {
 function cacheSummary() {
   const c = store.getConfig().updateCache;
   if (!c) return null;
-  return { hasUpdate: !!c.hasUpdate, behind: c.behind || 0, latestVersion: c.latestVersion || '', checkedAt: c.checkedAt, error: c.error || '' };
+  return { hasUpdate: !!c.hasUpdate, behind: c.behind || 0, latestVersion: c.latestVersion || '', via: c.via || '', checkedAt: c.checkedAt, error: c.error || '' };
 }
 
 module.exports = { check, apply, getStatus, getVersion, cacheSummary, scheduleRestart, writeLog, APP_DIR, BRANCH };
