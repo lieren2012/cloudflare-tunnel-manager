@@ -52,7 +52,7 @@
       <a data-page="creds" id="navCreds">🔑 API 凭证</a>
       <a data-page="logs">📜 运行日志</a>
       <a data-page="users" id="navUsers" class="hidden">👥 用户管理</a>
-      <a data-page="about">ℹ️ 关于</a>
+      <a data-page="about">ℹ️ 关于<span id="navUpdDot" class="dot hidden" title="有新版本可更新"></span></a>
     </nav>
     <div class="sidebar-foot"><span id="onlineCount"></span><br><a href="#" onclick="doLogout();return false;" class="logout-link" id="navLogout">退出登录</a></div>
   </aside>
@@ -61,6 +61,7 @@
     <!-- 首页 -->
     <section id="page-dashboard" class="page">
       <h1>运行状态</h1>
+      <div id="dashUpdate"></div>
       <div class="stat-cards">
         <div class="card"><div class="stat" id="statOnline">-</div><div class="stat-label">在线隧道</div></div>
         <div class="card"><div class="stat" id="statTotal">-</div><div class="stat-label">隧道总数</div></div>
@@ -169,19 +170,61 @@
       </table>
     </section>
 
-    <!-- 关于 -->
+    <!-- 关于 / 项目信息 / 更新 -->
     <section id="page-about" class="page">
       <h1>关于</h1>
+
       <div class="card">
-        <h3>CF Tunnel Manager v1.2.0</h3>
-        <p class="muted">参考「飞牛 Cloudflare Tunnel (NasPK)」重构的开源多隧道管理面板。</p>
+        <h3>项目信息</h3>
+        <table class="kv">
+          <tr><td>版本</td><td><b id="abVersion">-</b> <span class="muted small" id="abCommit"></span></td></tr>
+          <tr><td>运行环境</td><td id="abEnv">-</td></tr>
+          <tr><td>启动时间</td><td id="abStarted">-</td></tr>
+          <tr><td>数据目录</td><td><code id="aboutData">/data</code></td></tr>
+          <tr><td>源码目录</td><td><code id="abAppDir">-</code></td></tr>
+          <tr><td>服务端口</td><td>面板 <b>19090</b> ｜ 外部 API <b>19092</b> ｜ MCP <b>19093</b></td></tr>
+          <tr><td>项目仓库</td><td><a id="abRepo" href="https://github.com/lieren2012/cloudflare-tunnel-manager" target="_blank" rel="noopener">github.com/lieren2012/cloudflare-tunnel-manager</a></td></tr>
+        </table>
+        <p class="muted small" style="margin-top:10px">
+          参考「飞牛 Cloudflare Tunnel (NasPK)」重构的开源工具 · <a href="https://github.com/lieren2012/cloudflare-tunnel-manager/blob/main/LICENSE" target="_blank" rel="noopener">MIT License</a> ·
+          非 Cloudflare 官方项目，与 Cloudflare, Inc. 无关。
+        </p>
+      </div>
+
+      <!-- 版本更新（仅管理员可见） -->
+      <div class="card hidden" id="abUpdateCard">
+        <h3>版本更新</h3>
+        <div id="abUpdBox" class="upd-box"><span class="muted small">加载中…</span></div>
+        <div class="btn-row">
+          <button class="secondary" id="abCheckBtn" onclick="checkUpdate()">🔍 检测更新</button>
+          <button class="hidden" id="abApplyBtn" onclick="applyUpdate()">⬆️ 更新到最新版</button>
+          <a href="#" class="fedit hidden" id="abLogBtn" onclick="toggleUpdLog();return false;">查看更新日志</a>
+        </div>
+        <pre id="abUpdLog" class="log-view hidden"></pre>
+
+        <details class="upd-src">
+          <summary>更新源设置 <span class="muted small">（拉取失败或太慢时填写）</span></summary>
+          <label>Git 加速前缀
+            <input id="abMirror" placeholder="留空=直连 GitHub；可填 https://gh-proxy.com/">
+          </label>
+          <label>Git 代理
+            <input id="abProxy" placeholder="如 http://192.168.1.2:7890，留空=不使用">
+          </label>
+          <div class="btn-row">
+            <button class="secondary mini" onclick="saveUpdSrc()">保存更新源</button>
+            <span id="abSrcMsg" class="msg small"></span>
+          </div>
+        </details>
+      </div>
+
+      <div class="card">
+        <h3>功能</h3>
         <ul class="muted small">
           <li>多隧道并行在线（原版仅支持单隧道）</li>
           <li>多用户管理：首个注册者为管理员，后续注册需审核；普通用户仅能管理自己创建的隧道</li>
-          <li>设备识别：隧道绑定创建设备，同一账号多设备部署互不干扰；分组折叠展示</li>
-          <li>默认域名 + 一键随机子域名</li>
-          <li>Web 面板端口：<b>19090</b> ｜ 外部 API：<b>19092</b> ｜ MCP：<b>19093</b></li>
-          <li>数据持久化目录：<b id="aboutData">/data</b></li>
+          <li>设备识别：隧道绑定创建设备，同一账号多设备部署互不干扰；设备/分组筛选条</li>
+          <li>默认域名 + 一键随机子域名（自动创建 DNS CNAME）</li>
+          <li>面板内一键检测并更新（需源码挂载部署，更新不触碰 data/）</li>
           <li>凭据加密保存于本地，不会上传到任何第三方服务器</li>
         </ul>
       </div>

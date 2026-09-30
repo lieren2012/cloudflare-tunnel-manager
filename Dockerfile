@@ -6,20 +6,24 @@ FROM node:22-alpine
 LABEL org.opencontainers.image.title="CF Tunnel Manager" \
       org.opencontainers.image.description="Cloudflare Tunnel 多隧道管理面板 - 单容器多隧道并行"
 
-RUN apk add --no-cache tini
+# git：用于「关于」页的面板内一键更新（检查新版本 / 拉取新代码）
+RUN apk add --no-cache tini git
 
 # cloudflared 二进制（alpine 版，musl 兼容）
 COPY --from=cloudflared /usr/local/bin/cloudflared /usr/local/bin/cloudflared
 
+# 依赖装到独立目录：/app 会被宿主机源码卷覆盖，故依赖不能放在 /app/node_modules
+COPY package.json /opt/deps/package.json
+RUN cd /opt/deps && npm install --omit=dev --registry=https://registry.npmmirror.com
+
+# 源码拷一份进镜像：不挂载源码卷时也能独立运行
 WORKDIR /app
-
 COPY package.json ./
-RUN npm install --omit=dev --registry=https://registry.npmmirror.com
-
 COPY src ./src
 COPY public ./public
+COPY update.sh ./
 
-# 数据目录（凭据/配置/日志缓冲持久化）
+# 数据目录（凭据/配置/日志/会话持久化）
 RUN mkdir -p /data
 VOLUME ["/data"]
 
@@ -29,7 +33,9 @@ EXPOSE 19090 19092 19093
 ENV WEB_PORT=19090 \
     API_PORT=19092 \
     MCP_PORT=19093 \
-    DATA_DIR=/data
+    DATA_DIR=/data \
+    APP_DIR=/app \
+    NODE_PATH=/opt/deps/node_modules
 
 ENTRYPOINT ["/sbin/tini", "--"]
 CMD ["node", "src/server.js"]

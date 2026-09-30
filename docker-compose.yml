@@ -11,6 +11,9 @@ services:
       - ADMIN_PASSWORD=
     volumes:
       - ./data:/data
+      # 源码挂载：开启后可在面板「关于」页一键检测并更新（更新不影响 data/）
+      # 面板内更新 = git fetch + reset --hard 到最新提交，随后容器自动重启加载新代码
+      - ./:/app
     # 如果不使用 host 网络，请改用 ports 映射，并把下面服务的地址改为宿主机 IP：
     # ports:
     #   - "19090:19090"   # Web 管理面板

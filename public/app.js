@@ -115,6 +115,11 @@ function loadPage(p) {
   if (p === 'creds') loadCreds();
   if (p === 'users') loadUsers();
   if (p === 'logs') { loadLogTunnels(); renderLogs(); }
+  if (p === 'about') loadAbout();
+}
+function gotoPage(p) {
+  const a = document.querySelector(`.sidebar nav a[data-page="${p}"]`);
+  if (a) a.click();
 }
 
 // ---------- 首页 ----------
@@ -130,6 +135,8 @@ async function refreshDashboard() {
     const sys = await api('/system');
     $('#statUptime').textContent = fmtDur(sys.data.uptimeSec);
     $('#aboutData').textContent = sys.data.dataDir;
+    sysStartedAt = sys.data.startedAt || '';
+    renderUpdateHint(sys.data.update);
     $('#dashTunnels').innerHTML = tunnelsCache.length ? tunnelsCache.map(t => `
       <div class="card">
         <b>${esc(t.name)}</b> ${cfStatusTag(t.cfStatus)} ${t.online ? '<span class="tag ok">在线</span>' : '<span class="tag off">离线</span>'}
@@ -535,6 +542,236 @@ function autoLog() {
   if ($('#logAuto').checked) logTimer = setInterval(renderLogs, 3000);
 }
 
+// ---------- 关于 / 版本更新 ----------
+let updStatus = null;      // /api/update/status 返回
+let sysStartedAt = '';     // 当前进程启动时间（用于判断重启完成）
+
+function fmtTime(iso) {
+  if (!iso) return '-';
+  const d = new Date(iso);
+  return isNaN(d.getTime()) ? String(iso) : d.toLocaleString('zh-CN', { hour12: false });
+}
+
+function setUpdateBadge(has) {
+  const d = $('#navUpdDot');
+  if (d) d.classList.toggle('hidden', !has);
+}
+
+function renderUpdateHint(upd) {
+  const box = $('#dashUpdate');
+  if (!box) return;
+  if (upd && upd.hasUpdate) {
+    box.innerHTML = `<div class="banner warn">⬆️ 发现新版本${upd.latestVersion ? ' <b>v' + esc(upd.latestVersion) + '</b>' : ''}（落后 ${upd.behind} 个提交）。` +
+      `<a href="#" onclick="gotoPage('about');return false;">前往「关于」一键更新 →</a></div>`;
+  } else {
+    box.innerHTML = '';
+  }
+}
+
+async function loadAbout() {
+  try {
+    const { data } = await api('/system');
+    sysStartedAt = data.startedAt || '';
+    $('#abVersion').textContent = 'v' + data.version;
+    $('#abCommit').textContent = data.commit ? `（${data.commit}）` : '';
+    $('#abEnv').textContent = `Node ${data.node} · ${data.platform} · 已运行 ${fmtDur(data.uptimeSec)}`;
+    $('#abStarted').textContent = fmtTime(data.startedAt);
+    $('#aboutData').textContent = data.dataDir;
+    $('#abAppDir').textContent = data.appDir || '-';
+    renderUpdateHint(data.update);
+  } catch (_) { /* 忽略 */ }
+
+  const admin = !!ME && ME.role === 'admin';
+  $('#abUpdateCard').classList.toggle('hidden', !admin);
+  if (admin) refreshUpdStatus();
+}
+
+async function refreshUpdStatus() {
+  try {
+    const { data } = await api('/update/status');
+    updStatus = data;
+    $('#abMirror').value = (data.sources && data.sources.gitMirror) || '';
+    $('#abProxy').value = (data.sources && data.sources.gitProxy) || '';
+    renderUpdBox();
+    renderUpdLog();
+  } catch (e) {
+    $('#abUpdBox').innerHTML = `<span class="err">读取更新状态失败：${esc(e.message)}</span>`;
+  }
+}
+
+function renderUpdBox() {
+  const d = updStatus || {};
+  const box = $('#abUpdBox');
+  const applyBtn = $('#abApplyBtn');
+  const checkBtn = $('#abCheckBtn');
+  applyBtn.classList.add('hidden');
+  checkBtn.disabled = false;
+  checkBtn.textContent = '🔍 检测更新';
+
+  if (d.phase === 'restarting') {
+    box.innerHTML = '<div class="banner ok">✅ 代码已更新，面板正在重启以加载新版本…（约 5~15 秒）</div>';
+    return;
+  }
+  if (!d.supported) {
+    box.innerHTML = `<div class="banner warn">⚠️ 当前部署方式暂不支持面板内更新：<br>${esc(d.reason || '')}</div>`;
+    setUpdateBadge(false);
+    return;
+  }
+
+  const cur = d.current || {};
+  let html = `<p class="small">当前版本：<b>v${esc(d.version)}</b> <code>${esc(cur.short || '')}</code> ${esc(cur.subject || '')}</p>`;
+  html += `<p class="muted small">跟踪分支 <code>${esc(d.branch || '-')}</code>${d.remote ? ' · 仓库 <code>' + esc(d.remote) + '</code>' : ''}</p>`;
+  if (d.localChanges) html += `<p class="muted small">⚠️ 服务器上有 ${d.localChanges} 个代码文件被改动过，更新时会被覆盖（data/ 不受影响）。</p>`;
+
+  const c = d.check;
+  if (!c) {
+    html += '<p class="msg">尚未检测过更新，点击「检测更新」连接更新源。</p>';
+    setUpdateBadge(false);
+  } else if (c.error) {
+    html += `<div class="banner err">❌ ${esc(c.error)}<br><span class="small">可在下方「更新源设置」填入加速前缀或代理后重试。</span></div>`;
+    setUpdateBadge(false);
+  } else if (c.hasUpdate) {
+    html += `<div class="banner warn">⬆️ 发现新版本${c.latestVersion ? ' <b>v' + esc(c.latestVersion) + '</b>' : ''}，落后 <b>${c.behind}</b> 个提交。</div>`;
+    if (c.commits && c.commits.length) {
+      html += '<div class="upd-commits">' + c.commits.map(l => `<div>${esc(l)}</div>`).join('') + '</div>';
+    }
+    applyBtn.classList.remove('hidden');
+    applyBtn.disabled = false;
+    applyBtn.textContent = '⬆️ 更新到最新版';
+    setUpdateBadge(true);
+  } else {
+    html += `<p class="msg ok">✅ 已是最新版本（检测于 ${esc(fmtTime(c.checkedAt))}）</p>`;
+    setUpdateBadge(false);
+  }
+  box.innerHTML = html;
+}
+
+function renderUpdLog() {
+  const pre = $('#abUpdLog');
+  if (!pre) return;
+  const log = (updStatus && updStatus.log) || [];
+  pre.textContent = log.length ? log.join('\n') : '（暂无更新日志）';
+  pre.scrollTop = pre.scrollHeight;
+}
+
+function toggleUpdLog() {
+  const pre = $('#abUpdLog');
+  const btn = $('#abLogBtn');
+  pre.classList.toggle('hidden');
+  const hidden = pre.classList.contains('hidden');
+  btn.textContent = hidden ? '查看更新日志' : '收起更新日志';
+  if (!hidden) renderUpdLog();
+}
+
+async function checkUpdate() {
+  const btn = $('#abCheckBtn');
+  btn.disabled = true;
+  btn.textContent = '🔍 检测中…';
+  $('#abUpdBox').innerHTML = '<p class="muted small">正在连接更新源并比对版本…（国内直连 GitHub 可能较慢，请稍候）</p>';
+  $('#abLogBtn').classList.remove('hidden');
+  try {
+    const { data } = await api('/update/check', { method: 'POST' });
+    updStatus = data;
+    renderUpdBox();
+    renderUpdLog();
+  } catch (e) {
+    $('#abUpdBox').innerHTML = `<div class="banner err">检测失败：${esc(e.message)}</div>`;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '🔍 检测更新';
+  }
+}
+
+async function applyUpdate() {
+  const c = (updStatus && updStatus.check) || {};
+  const ver = c.latestVersion ? 'v' + c.latestVersion : '最新版本';
+  const ok = confirm(
+    `即将更新到 ${ver}（${c.behind || '?'} 个提交）。\n\n` +
+    '· 会覆盖服务器上的代码文件（git reset --hard）\n' +
+    '· data/ 中的凭据、用户、隧道配置不受影响\n' +
+    '· 更新后面板会自动重启，约 5~15 秒无法访问\n' +
+    '· 重启后会自动刷新页面（登录状态保留）\n\n确定继续吗？'
+  );
+  if (!ok) return;
+
+  const btn = $('#abApplyBtn');
+  btn.disabled = true;
+  btn.textContent = '⬆️ 更新中…';
+  $('#abUpdBox').innerHTML = '<p class="muted small">正在拉取并应用新版本…请勿关闭页面。</p>';
+  try {
+    const { data } = await api('/update/apply', { method: 'POST' });
+    if (!data.updated) { alert(data.message || '已是最新版本'); await refreshUpdStatus(); return; }
+    $('#abUpdBox').innerHTML = `<div class="banner ok">✅ 已更新：<code>${esc((data.from && data.from.short) || '')}</code> → <code>${esc(data.to && data.to.short)}</code>` +
+      `<br>面板正在重启，恢复后本页会自动刷新。</div>`;
+    waitForRestart();
+  } catch (e) {
+    btn.disabled = false;
+    btn.textContent = '⬆️ 更新到最新版';
+    $('#abUpdBox').innerHTML = `<div class="banner err">更新失败：${esc(e.message)}</div>`;
+  }
+}
+
+/** 等待面板重启完成（进程启动时间变化或先断开后恢复） */
+function waitForRestart() {
+  let tries = 0;
+  let sawDown = false;
+  const t = setInterval(async () => {
+    tries++;
+    try {
+      const r = await fetch('/api/system', { cache: 'no-store' });
+      if (!r.ok) {
+        sawDown = true;
+      } else {
+        const j = await r.json();
+        const st = j && j.data && j.data.startedAt;
+        if (sawDown || (sysStartedAt && st && st !== sysStartedAt)) {
+          clearInterval(t);
+          location.reload();
+          return;
+        }
+      }
+    } catch (_) { sawDown = true; }
+    if (tries > 90) {
+      clearInterval(t);
+      $('#abUpdBox').innerHTML = '<div class="banner warn">等待重启超时，请手动刷新页面（Ctrl + F5）。</div>';
+    }
+  }, 2000);
+}
+
+async function saveUpdSrc() {
+  const m = $('#abSrcMsg');
+  m.textContent = '保存中…';
+  m.className = 'msg small';
+  try {
+    await api('/config', { method: 'POST', body: { gitMirror: $('#abMirror').value, gitProxy: $('#abProxy').value } });
+    m.textContent = '✅ 已保存';
+    m.className = 'msg small ok';
+    cfgLoaded = false;
+    refreshUpdStatus();
+  } catch (e) {
+    m.textContent = '❌ ' + e.message;
+    m.className = 'msg small err';
+  }
+}
+
+/** 管理员登录后静默检查一次（12 小时内不重复联网检测） */
+async function maybeAutoCheckUpdate() {
+  if (!ME || ME.role !== 'admin') return;
+  try {
+    const { data } = await api('/update/status');
+    updStatus = data;
+    setUpdateBadge(!!(data.check && data.check.hasUpdate));
+    if (!data.supported) return;
+    const last = data.check && data.check.checkedAt ? new Date(data.check.checkedAt).getTime() : 0;
+    if (Date.now() - last < 12 * 3600 * 1000) return;
+    const { data: fresh } = await api('/update/check', { method: 'POST' });
+    updStatus = fresh;
+    const ck = fresh.check || {};
+    setUpdateBadge(!!ck.hasUpdate);
+    renderUpdateHint(ck);
+  } catch (_) { /* 未联网时静默忽略 */ }
+}
+
 // ---------- 轮询 ----------
 setInterval(() => {
   if (!ME) return;
@@ -546,6 +783,7 @@ setInterval(() => {
 // ---------- 启动 ----------
 async function boot() {
   loadPage('dashboard');
+  setTimeout(maybeAutoCheckUpdate, 3000); // 管理员登录后静默检查更新
 }
 (async function init() {
   try {

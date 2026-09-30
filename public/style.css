@@ -102,6 +102,28 @@ button.mini { padding: 5px 10px; font-size: 12px; border-radius: 6px; }
 .modal-card { background: var(--panel); border-radius: var(--radius); padding: 26px; width: 420px; }
 .modal-card input { width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; margin-top: 8px; }
 
+/* 关于 / 版本更新 */
+.banner.warn { background: #fffbeb; border: 1px solid #fde68a; color: #92400e; }
+.banner.err { background: #fef2f2; border: 1px solid #fecaca; color: #991b1b; }
+.banner a { color: inherit; font-weight: 600; text-decoration: underline; }
+.kv { width: 100%; border-collapse: collapse; font-size: 13px; }
+.kv td { padding: 7px 0; border-bottom: 1px dashed var(--border); vertical-align: top; }
+.kv tr:last-child td { border-bottom: none; }
+.kv td:first-child { color: var(--muted); width: 92px; white-space: nowrap; }
+.kv a { color: var(--primary); text-decoration: none; }
+.kv a:hover { text-decoration: underline; }
+.upd-box { margin-bottom: 4px; }
+.upd-box p { margin: 4px 0; }
+.upd-commits { background: #0f172a; color: #a5f3fc; font-family: Consolas, monospace; font-size: 12px; border-radius: 8px; padding: 10px 12px; margin-top: 10px; max-height: 200px; overflow: auto; }
+.upd-commits div { padding: 1px 0; white-space: pre-wrap; word-break: break-all; }
+.upd-src { margin-top: 16px; border-top: 1px dashed var(--border); padding-top: 12px; }
+.upd-src summary { cursor: pointer; font-size: 13px; color: var(--muted); font-weight: 600; }
+.upd-src label { display: block; margin: 10px 0 4px; font-size: 13px; font-weight: 500; }
+.upd-src input { width: 100%; max-width: 480px; padding: 8px 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 13px; margin-top: 4px; }
+.dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #f87171; margin-left: 6px; vertical-align: middle; }
+.fedit { text-decoration: none; }
+button:disabled { opacity: .6; cursor: not-allowed; }
+
 @media (max-width: 800px) {
   .layout { flex-direction: column; }
   .sidebar { width: 100%; height: auto; position: static; flex-direction: row; flex-wrap: wrap; align-items: center; }

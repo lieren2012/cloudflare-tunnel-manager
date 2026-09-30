@@ -7,23 +7,48 @@
 const express = require('express');
 const crypto = require('crypto');
 const os = require('os');
+const fs = require('fs');
 const path = require('path');
 const store = require('./store');
 const tunnelMgr = require('./tunnels');
 const cfd = require('./cloudflare');
 const external = require('./external');
 const mcp = require('./mcp');
+const update = require('./update');
 
 const WEB_PORT = parseInt(process.env.WEB_PORT || '19090');
 const API_PORT = parseInt(process.env.API_PORT || '19092');
 const MCP_PORT = parseInt(process.env.MCP_PORT || '19093');
+const STARTED_AT = new Date().toISOString();
 
 const app = express();
 app.use(express.json());
 
 // ================= 用户与会话 =================
-// sessions: sid -> username；'__master' 为紧急管理密码（ADMIN_PASSWORD）登录的虚拟管理员
+// sessions: sid -> { username, exp }；'__master' 为紧急管理密码（ADMIN_PASSWORD）登录的虚拟管理员
+// 会话持久化到 data/sessions.json —— 面板内更新会重启进程，持久化后无需重新登录
+const SESSION_TTL = 7 * 24 * 3600 * 1000;
+const SESS_FILE = path.join(store.DATA_DIR, 'sessions.json');
 const sessions = new Map();
+
+(function loadSessions() {
+  try {
+    if (!fs.existsSync(SESS_FILE)) return;
+    const obj = JSON.parse(fs.readFileSync(SESS_FILE, 'utf8'));
+    const now = Date.now();
+    for (const [sid, v] of Object.entries(obj)) {
+      if (v && v.username && v.exp > now) sessions.set(sid, v);
+    }
+  } catch (e) { console.error('[session] 读取会话失败，忽略:', e.message); }
+})();
+
+function saveSessions() {
+  try {
+    const obj = {};
+    for (const [sid, v] of sessions) obj[sid] = v;
+    fs.writeFileSync(SESS_FILE, JSON.stringify(obj));
+  } catch (e) { console.error('[session] 写入会话失败:', e.message); }
+}
 
 function newSalt() { return crypto.randomBytes(16).toString('hex'); }
 function hashPassword(pwd, salt) { return crypto.scryptSync(String(pwd), salt, 32).toString('hex'); }
@@ -31,7 +56,8 @@ function newSid() { return crypto.randomBytes(24).toString('hex'); }
 
 function issueSession(res, username) {
   const sid = newSid();
-  sessions.set(sid, username);
+  sessions.set(sid, { username, exp: Date.now() + SESSION_TTL });
+  saveSessions();
   res.setHeader('Set-Cookie', `session=${sid}; Path=/; HttpOnly; SameSite=Strict; Max-Age=604800`);
 }
 
@@ -43,8 +69,10 @@ function sessionOf(req) {
 function currentUser(req) {
   const sid = sessionOf(req);
   if (!sid) return null;
-  const username = sessions.get(sid);
-  if (!username) return null;
+  const s = sessions.get(sid);
+  if (!s || !s.username) return null;
+  if (s.exp && s.exp < Date.now()) { sessions.delete(sid); saveSessions(); return null; }
+  const username = s.username;
   if (username === '__master') return { id: '__master', username: 'master', role: 'admin', status: 'approved' };
   const u = store.getUsers().find(x => x.username === username);
   if (!u || u.status !== 'approved') return null; // 待审核/禁用立即失效
@@ -133,7 +161,7 @@ app.post('/api/register', (req, res) => {
 
 app.post('/api/logout', (req, res) => {
   const sid = sessionOf(req);
-  if (sid) sessions.delete(sid);
+  if (sid) { sessions.delete(sid); saveSessions(); }
   res.setHeader('Set-Cookie', 'session=; Path=/; Max-Age=0');
   res.json({ success: true });
 });
@@ -230,7 +258,7 @@ app.post('/api/config/regopen', requireAdmin, (req, res) => {
 
 app.get('/api/config', (req, res) => {
   const cfg = store.getConfig();
-  res.json({ success: true, data: { accountId: cfg.accountId, protocol: cfg.protocol, edgeIpVersion: cfg.edgeIpVersion, hasToken: !!cfg.apiToken, defaultDomain: cfg.defaultDomain || '', deviceName: cfg.deviceName || '' } });
+  res.json({ success: true, data: { accountId: cfg.accountId, protocol: cfg.protocol, edgeIpVersion: cfg.edgeIpVersion, hasToken: !!cfg.apiToken, defaultDomain: cfg.defaultDomain || '', deviceName: cfg.deviceName || '', gitMirror: cfg.gitMirror || '', gitProxy: cfg.gitProxy || '' } });
 });
 
 app.post('/api/config', requireAdmin, async (req, res) => {
@@ -248,6 +276,9 @@ app.post('/api/config', requireAdmin, async (req, res) => {
     if (['4', '6', 'auto'].includes(edgeIpVersion)) patch.edgeIpVersion = edgeIpVersion;
     if (typeof defaultDomain === 'string') patch.defaultDomain = defaultDomain.trim();
     if (typeof (req.body || {}).deviceName === 'string') patch.deviceName = req.body.deviceName.trim().slice(0, 32); // 本设备自定义显示名
+    // 面板内更新的更新源配置（拉取慢/失败时使用）
+    if (typeof (req.body || {}).gitMirror === 'string') patch.gitMirror = req.body.gitMirror.trim().slice(0, 200);
+    if (typeof (req.body || {}).gitProxy === 'string') patch.gitProxy = req.body.gitProxy.trim().slice(0, 200);
     store.updateConfig(patch);
     res.json({ success: true });
   } catch (e) { res.status(400).json({ success: false, error: e.message }); }
@@ -438,18 +469,49 @@ app.delete('/api/creds/:id', requireAdmin, (req, res) => {
 // ---- 系统信息 ----
 
 app.get('/api/system', (req, res) => {
+  const u = currentUser(req);
+  const admin = !!u && u.role === 'admin';
   res.json({
     success: true,
     data: {
-      version: '1.2.0',
+      version: update.getVersion(),
+      commit: process.env.GIT_COMMIT || '',
       platform: process.platform,
       node: process.version,
       uptimeSec: Math.floor(process.uptime()),
+      startedAt: STARTED_AT,
       dataDir: store.DATA_DIR,
+      appDir: update.APP_DIR,
       apiPort: API_PORT,
       mcpPort: MCP_PORT,
+      update: admin ? update.cacheSummary() : null, // 有新版时前端显示提示（仅管理员）
     },
   });
+});
+
+// ---- 面板内更新（仅管理员） ----
+
+// 更新状态（不主动联网，读缓存 + 本地 git 信息）
+app.get('/api/update/status', requireAdmin, async (req, res) => {
+  try { res.json({ success: true, data: await update.getStatus() }); }
+  catch (e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// 检测更新（会向更新源 fetch，可能较慢）
+app.post('/api/update/check', requireAdmin, async (req, res) => {
+  try {
+    await update.check();
+    res.json({ success: true, data: await update.getStatus() });
+  } catch (e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// 执行更新（需人工确认；成功后自动重启面板加载新版本）
+app.post('/api/update/apply', requireAdmin, async (req, res) => {
+  try {
+    const r = await update.apply();
+    res.json({ success: true, data: r });
+    if (r.updated) update.scheduleRestart(r.restartInMs || 1500);
+  } catch (e) { res.status(400).json({ success: false, error: e.message }); }
 });
 
 // ---------- 静态前端 ----------
