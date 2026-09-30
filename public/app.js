@@ -667,8 +667,8 @@ function renderUpdBox() {
   html += `<p class="muted small">跟踪分支 <code>${esc(d.branch || '-')}</code>${d.remote ? ' · 仓库 <code>' + esc(d.remote) + '</code>' : ''}</p>`;
   if (d.localChanges) html += `<p class="muted small">⚠️ 服务器上有 ${d.localChanges} 个代码文件被改动过，更新时会被覆盖（data/ 不受影响）。</p>`;
 
-  const viaLine = c && c.via ? `<p class="muted small">本次检测经 <b>${esc(c.via)}</b> 完成${(updStatus.sources && updStatus.sources.lastGood && !updStatus.sources.gitMirror) ? '（已记住，下次优先使用）' : ''}。</p>` : '';
   const c = d.check;
+  const viaLine = c && c.via ? `<p class="muted small">本次检测经 <b>${esc(c.via)}</b> 完成${(d.sources && d.sources.lastGood && !d.sources.gitMirror) ? '（已记住，下次优先使用）' : ''}。</p>` : '';
   if (!c) {
     html += '<p class="msg">尚未检测过更新，点击「检测更新」连接更新源（直连失败会自动切换内置镜像）。</p>';
     setUpdateBadge(false);
