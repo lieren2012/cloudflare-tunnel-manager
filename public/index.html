@@ -80,7 +80,7 @@
     <section id="page-config" class="page">
       <h1>系统配置</h1>
       <div class="card form-card">
-        <h3>站点设置</h3>
+        <h3>🏷️ 站点设置</h3>
         <label>站点名称（浏览器标签页 / 侧边栏 / 登录页显示）
           <input id="cfgSiteName" maxlength="32" placeholder="留空 = Cloudflare Tunnel 管理面板">
         </label>
@@ -92,17 +92,21 @@
         <p id="siteMsg" class="msg"></p>
       </div>
       <div class="card form-card">
-        <h3>Cloudflare 账号</h3>
+        <h3>☁️ Cloudflare 账号</h3>
         <details class="cfg-guide">
           <summary>📖 怎么拿 Account ID 和 API Token？（3 步，1 分钟）</summary>
           <ol class="muted small">
-            <li><b>Account ID</b>：打开 <a href="https://dash.cloudflare.com" target="_blank" rel="noopener">dash.cloudflare.com</a> → 右侧栏「账户 ID」→ 复制（32 位字符）</li>
-            <li><b>API Token</b>：打开 <a href="https://dash.cloudflare.com/profile/api-tokens" target="_blank" rel="noopener">API 令牌页面</a> → 创建令牌 → 最下面「创建自定义令牌」→ 只加两条权限：
-              <br>　• 账户 · <b>Cloudflare Tunnel</b> · <b>编辑</b>
-              <br>　• 区域 · <b>DNS</b> · <b>编辑</b>
-              <br>　区域资源选你的域名 → 继续 → 创建 → <b>复制令牌（只显示一次）</b>
+            <li><b>第 1 步 · 复制 Account ID</b>：打开 <a href="https://dash.cloudflare.com" target="_blank" rel="noopener">dash.cloudflare.com</a> → 首页<b>右侧栏</b>找到「账户 ID / Account ID」→ 点复制按钮（一串 32 位字符）</li>
+            <li><b>第 2 步 · 创建 API Token</b>：打开 <a href="https://dash.cloudflare.com/profile/api-tokens" target="_blank" rel="noopener">API 令牌页面</a> → 「创建令牌」→ 拉到最下面选「<b>创建自定义令牌</b>」→ 在「权限」处依次添加下面 <b>2 条</b>权限（每条权限 = 三个下拉框：权限类型 → 具体权限 → 级别）：
+              <table class="guide-perm">
+                <tr><th>① 权限类型</th><th>② 具体权限</th><th>③ 级别（选「编辑」）</th></tr>
+                <tr><td>账户 <span class="en">Account</span></td><td><b>Cloudflare Tunnel</b></td><td><b>编辑 <span class="en">Edit</span></b></td></tr>
+                <tr><td>区域 <span class="en">Zone</span></td><td><b>DNS</b></td><td><b>编辑 <span class="en">Edit</span></b></td></tr>
+              </table>
+              <span class="muted">（「编辑」就是第三个下拉框「级别」里的选项，英文界面叫 <b>Edit</b>；注意是「DNS」不是「DNS 设置」）</span><br>
+              区域资源选你的域名 → 「继续以显示摘要」→ 「创建令牌」→ <b>立刻复制令牌（只显示这一次）</b>
             </li>
-            <li>把两串字符填到下面两个框 → 点「测试配置」显示通过 → 点「保存配置」</li>
+            <li><b>第 3 步 · 填进面板</b>：把两串字符分别填到下面「账号 ID」和「API 令牌」两个框 → 点「测试配置」显示通过 → 点「保存配置」</li>
           </ol>
           <p class="muted small">⚠️ 不要用「Global API Key」（全局密钥权限过大）；填错最常见的原因是令牌没复制全、或权限少给了 DNS。
             <a href="https://github.com/lieren2012/cloudflare-tunnel-manager/blob/main/docs/get-credentials.md" target="_blank" rel="noopener">查看完整教程与常见问题 →</a>
@@ -111,7 +115,7 @@
         <label>账号 ID（Account ID）<input id="cfgAccount" placeholder="Cloudflare Account ID"></label>
         <label>API 令牌（API Token）<input id="cfgToken" type="password" placeholder="留空表示不修改已保存的令牌"></label>
         <p class="muted">令牌需授予 <b>Cloudflare Tunnel（读取+编辑）</b> 与 <b>DNS（读取+编辑）</b> 权限。</p>
-        <h3>连接参数</h3>
+        <h3>🔌 连接参数</h3>
         <label>连接协议
           <select id="cfgProtocol">
             <option value="quic">QUIC（默认，延迟更低）</option>
