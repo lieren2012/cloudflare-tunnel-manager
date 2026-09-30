@@ -60,17 +60,20 @@ git -c user.name="$AUTHOR_NAME" -c user.email="$AUTHOR_MAIL" \
   commit -q -m "docs: 发布文档站（$(date '+%Y-%m-%d %H:%M')）"
 LOCAL_TREE="$(git rev-parse HEAD^{tree})"
 
-echo "==> 3/4 连接远端并比对内容"
+echo "==> 3/4 读取线上版本并比对内容"
 git remote add origin "https://github.com/${REPO_SLUG}.git"
-if git ls-remote --exit-code --heads origin "$PAGES_BRANCH" >/dev/null 2>&1; then
-  if git fetch -q origin "$PAGES_BRANCH" 2>/dev/null; then
-    REMOTE_TREE="$(git rev-parse FETCH_HEAD^{tree} 2>/dev/null || echo '')"
-    if [ "$LOCAL_TREE" = "$REMOTE_TREE" ]; then
-      echo "✅ 线上内容与本次构建完全一致，无需重新发布"
-      cd "$ROOT" && rm -rf "$WORK"
-      exit 0
-    fi
-  fi
+REMOTE_TREE=""
+if git -c http.version=HTTP/1.1 fetch -q --depth 1 origin "$PAGES_BRANCH" 2>/dev/null; then
+  REMOTE_TREE="$(git rev-parse "FETCH_HEAD^{tree}" 2>/dev/null || true)"
+else
+  echo "    ⚠️ 暂时读不到远端 ${PAGES_BRANCH}（网络/权限），将直接尝试发布"
+fi
+echo "    本地内容指纹：${LOCAL_TREE}"
+[ -n "$REMOTE_TREE" ] && echo "    线上内容指纹：${REMOTE_TREE}"
+if [ -n "$REMOTE_TREE" ] && [ "$LOCAL_TREE" = "$REMOTE_TREE" ]; then
+  echo "✅ 线上内容与本次构建完全一致，无需重新发布"
+  cd "$ROOT" && rm -rf "$WORK"
+  exit 0
 fi
 
 echo "==> 4/4 推送到 ${PAGES_BRANCH} 分支"
