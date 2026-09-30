@@ -3,13 +3,16 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Cloudflare Tunnel 管理面板</title>
+<!-- 防搜索引擎收录：即使被爬到也不建索引、不缓存快照 -->
+<meta name="robots" content="noindex,nofollow,noarchive,nosnippet,noimageindex">
+<meta name="referrer" content="no-referrer">
+<title id="docTitle">Cloudflare Tunnel 管理面板</title>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
 <div id="loginView" class="login-view hidden">
   <div class="login-card">
-    <h2>🔐 Cloudflare Tunnel 面板</h2>
+    <h2>🔐 <span id="loginTitle">Cloudflare Tunnel 面板</span></h2>
     <!-- 首次使用：创建管理员 -->
     <div id="setupForm" class="hidden">
       <p class="muted">首次使用，请创建管理员账户</p>
@@ -43,7 +46,7 @@
   <aside class="sidebar">
     <div class="logo">
       <span class="logo-icon">☁️</span>
-      <div><b>Cloudflare Tunnel</b><small>多隧道并行管理</small></div>
+      <div><b id="brandName">Cloudflare Tunnel</b><small id="brandSub">多隧道并行管理</small></div>
     </div>
     <nav>
       <a data-page="dashboard" class="active">🏠 首页</a>
@@ -76,6 +79,18 @@
     <!-- 系统配置 -->
     <section id="page-config" class="page">
       <h1>系统配置</h1>
+      <div class="card form-card">
+        <h3>站点设置</h3>
+        <label>站点名称（浏览器标签页 / 侧边栏 / 登录页显示）
+          <input id="cfgSiteName" maxlength="32" placeholder="留空 = Cloudflare Tunnel 管理面板">
+        </label>
+        <label class="chk"><input type="checkbox" id="cfgNoIndex"> 禁止搜索引擎收录（robots.txt 全站禁止 + 响应头 noindex，<b>建议保持开启</b>）</label>
+        <p class="muted small">改个不带业务特征的名字并禁止收录，可降低面板被搜索引擎、扫描器“顺藤摸瓜”发现的风险。注意：这只是降低曝光，不等于访问控制——真正的防护请配合 Cloudflare Access 或强密码使用。</p>
+        <div class="btn-row">
+          <button onclick="saveSite()">保存站点设置</button>
+        </div>
+        <p id="siteMsg" class="msg"></p>
+      </div>
       <div class="card form-card">
         <h3>Cloudflare 账号</h3>
         <label>账号 ID（Account ID）<input id="cfgAccount" placeholder="Cloudflare Account ID"></label>
@@ -177,6 +192,7 @@
       <div class="card">
         <h3>项目信息</h3>
         <table class="kv">
+          <tr><td>站点名称</td><td><b id="abSiteName">-</b> <span class="muted small" id="abNoIndex"></span></td></tr>
           <tr><td>版本</td><td><b id="abVersion">-</b> <span class="muted small" id="abCommit"></span></td></tr>
           <tr><td>运行环境</td><td id="abEnv">-</td></tr>
           <tr><td>启动时间</td><td id="abStarted">-</td></tr>
@@ -224,6 +240,7 @@
           <li>多用户管理：首个注册者为管理员，后续注册需审核；普通用户仅能管理自己创建的隧道</li>
           <li>设备识别：隧道绑定创建设备，同一账号多设备部署互不干扰；设备/分组筛选条</li>
           <li>默认域名 + 一键随机子域名（自动创建 DNS CNAME）</li>
+          <li>站点名称自定义 + 禁止搜索引擎收录（robots.txt / noindex 响应头）</li>
           <li>面板内一键检测并更新（需源码挂载部署，更新不触碰 data/）</li>
           <li>凭据加密保存于本地，不会上传到任何第三方服务器</li>
         </ul>

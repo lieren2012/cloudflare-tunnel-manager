@@ -6,6 +6,18 @@ let logsCache = [];
 let logTimer = null;
 let ME = null;          // 当前登录用户 { username, role }
 let cfgCache = {};      // 系统配置缓存（defaultDomain 等）
+const DEFAULT_SITE_NAME = 'Cloudflare Tunnel 管理面板';
+
+// ---------- 站点名称 ----------
+// 自定义站点名：同步到浏览器标签页标题、侧边栏品牌名、登录页标题
+function applySiteName(name) {
+  const n = (name || '').trim() || DEFAULT_SITE_NAME;
+  document.title = n;
+  const dt = $('#docTitle'); if (dt) dt.textContent = n;
+  const bn = $('#brandName'); if (bn) bn.textContent = n;
+  const bs = $('#brandSub'); if (bs) bs.textContent = '多隧道并行管理';
+  const lt = $('#loginTitle'); if (lt) lt.textContent = n;
+}
 
 // ---------- 工具 ----------
 async function api(path, opt = {}) {
@@ -84,6 +96,7 @@ async function doLogout() {
 async function afterLogin() {
   const { data } = await api('/auth/state');
   ME = data.me;
+  applySiteName(data.siteName);
   applyRole();
   showApp();
   boot();
@@ -166,10 +179,25 @@ async function loadConfig() {
     $('#cfgProtocol').value = data.protocol || 'quic';
     $('#cfgEdge').value = data.edgeIpVersion || '4';
     $('#cfgToken').placeholder = data.hasToken ? '已保存（留空表示不修改）' : '请输入 API Token';
+    $('#cfgSiteName').value = data.siteName || '';
+    $('#cfgNoIndex').checked = data.noIndex !== false;
     await loadZones();
   } catch (_) {}
 }
 function cfgMsg(text, ok) { const m = $('#cfgMsg'); m.textContent = text; m.className = 'msg ' + (ok ? 'ok' : 'err'); }
+function siteMsg(text, ok) { const m = $('#siteMsg'); m.textContent = text; m.className = 'msg ' + (ok ? 'ok' : 'err'); }
+
+async function saveSite() {
+  siteMsg('保存中…', true);
+  try {
+    const name = $('#cfgSiteName').value.trim();
+    await api('/config', { method: 'POST', body: { siteName: name, noIndex: $('#cfgNoIndex').checked } });
+    cfgCache.siteName = name;
+    applySiteName(name);            // 立即生效，无需刷新
+    siteMsg('✅ 已保存', true);
+    loadConfig();
+  } catch (e) { siteMsg('❌ ' + e.message, false); }
+}
 async function testConfig() {
   cfgMsg('测试中…', true);
   try {
@@ -578,6 +606,8 @@ async function loadAbout() {
     $('#abStarted').textContent = fmtTime(data.startedAt);
     $('#aboutData').textContent = data.dataDir;
     $('#abAppDir').textContent = data.appDir || '-';
+    $('#abSiteName').textContent = data.siteName || DEFAULT_SITE_NAME;
+    $('#abNoIndex').textContent = data.noIndex ? '（已禁止搜索引擎收录）' : '（⚠️ 允许搜索引擎收录）';
     renderUpdateHint(data.update);
   } catch (_) { /* 忽略 */ }
 
@@ -788,6 +818,7 @@ async function boot() {
 (async function init() {
   try {
     const { data } = await api('/auth/state');
+    applySiteName(data.siteName); // 登录页也显示自定义站点名
     if (!data.loggedIn) {
       showLoginView(data.needsSetup ? 'setup' : 'login');
       return;

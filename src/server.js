@@ -24,6 +24,28 @@ const STARTED_AT = new Date().toISOString();
 const app = express();
 app.use(express.json());
 
+// ================= 站点名称 & 防搜索引擎收录 =================
+const DEFAULT_SITE_NAME = 'Cloudflare Tunnel 管理面板';
+
+function siteName() {
+  const n = (store.getConfig().siteName || '').trim();
+  return n || DEFAULT_SITE_NAME;
+}
+function noIndexOn() { return store.getConfig().noIndex !== false; }
+
+// 所有响应都带 noindex 头（比 robots.txt 更硬：即使被抓到也不会被收录）
+app.use((req, res, next) => {
+  if (noIndexOn()) res.setHeader('X-Robots-Tag', 'noindex, nofollow, noarchive, nosnippet, noimageindex, notranslate');
+  next();
+});
+
+// 爬虫协议：默认全站禁止抓取
+app.get('/robots.txt', (req, res) => {
+  res.type('text/plain');
+  if (noIndexOn()) return res.send('User-agent: *\nDisallow: /\n');
+  res.send('User-agent: *\nDisallow: /api/\n');
+});
+
 // ================= 用户与会话 =================
 // sessions: sid -> { username, exp }；'__master' 为紧急管理密码（ADMIN_PASSWORD）登录的虚拟管理员
 // 会话持久化到 data/sessions.json —— 面板内更新会重启进程，持久化后无需重新登录
@@ -108,6 +130,7 @@ app.get('/api/auth/state', (req, res) => {
       regOpen: store.getConfig().regOpen !== false,
       loggedIn: !!u,
       me: u ? { username: u.username, role: u.role } : null,
+      siteName: siteName(), // 登录页也要显示站点名
     },
   });
 });
@@ -258,7 +281,7 @@ app.post('/api/config/regopen', requireAdmin, (req, res) => {
 
 app.get('/api/config', (req, res) => {
   const cfg = store.getConfig();
-  res.json({ success: true, data: { accountId: cfg.accountId, protocol: cfg.protocol, edgeIpVersion: cfg.edgeIpVersion, hasToken: !!cfg.apiToken, defaultDomain: cfg.defaultDomain || '', deviceName: cfg.deviceName || '', gitMirror: cfg.gitMirror || '', gitProxy: cfg.gitProxy || '' } });
+  res.json({ success: true, data: { accountId: cfg.accountId, protocol: cfg.protocol, edgeIpVersion: cfg.edgeIpVersion, hasToken: !!cfg.apiToken, defaultDomain: cfg.defaultDomain || '', deviceName: cfg.deviceName || '', gitMirror: cfg.gitMirror || '', gitProxy: cfg.gitProxy || '', siteName: cfg.siteName || '', noIndex: cfg.noIndex !== false } });
 });
 
 app.post('/api/config', requireAdmin, async (req, res) => {
@@ -276,6 +299,9 @@ app.post('/api/config', requireAdmin, async (req, res) => {
     if (['4', '6', 'auto'].includes(edgeIpVersion)) patch.edgeIpVersion = edgeIpVersion;
     if (typeof defaultDomain === 'string') patch.defaultDomain = defaultDomain.trim();
     if (typeof (req.body || {}).deviceName === 'string') patch.deviceName = req.body.deviceName.trim().slice(0, 32); // 本设备自定义显示名
+    // 站点名称（留空 = 恢复默认）与防收录开关
+    if (typeof (req.body || {}).siteName === 'string') patch.siteName = req.body.siteName.trim().replace(/[<>]/g, '').slice(0, 32);
+    if (typeof (req.body || {}).noIndex === 'boolean') patch.noIndex = req.body.noIndex;
     // 面板内更新的更新源配置（拉取慢/失败时使用）
     if (typeof (req.body || {}).gitMirror === 'string') patch.gitMirror = req.body.gitMirror.trim().slice(0, 200);
     if (typeof (req.body || {}).gitProxy === 'string') patch.gitProxy = req.body.gitProxy.trim().slice(0, 200);
@@ -484,6 +510,9 @@ app.get('/api/system', (req, res) => {
       appDir: update.APP_DIR,
       apiPort: API_PORT,
       mcpPort: MCP_PORT,
+      siteName: siteName(),
+      siteNameDefault: DEFAULT_SITE_NAME,
+      noIndex: noIndexOn(),
       update: admin ? update.cacheSummary() : null, // 有新版时前端显示提示（仅管理员）
     },
   });

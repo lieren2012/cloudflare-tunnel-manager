@@ -60,6 +60,8 @@ const DEFAULT_CONFIG = {
   protocol: 'quic',        // quic | http2
   edgeIpVersion: '4',      // 4 | 6 | auto
   adminPassword: process.env.ADMIN_PASSWORD || '',
+  siteName: '',            // 自定义站点名称（留空用默认「Cloudflare Tunnel 管理面板」）
+  noIndex: true,           // 禁止搜索引擎收录（robots.txt + noindex 响应头）
 };
 
 function getConfig() { return load('config', DEFAULT_CONFIG); }

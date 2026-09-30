@@ -22,7 +22,7 @@ code { background: #eef2f7; padding: 1px 5px; border-radius: 4px; font-size: 12p
 .logo { display: flex; gap: 10px; align-items: center; padding: 4px 8px 18px; }
 .logo-icon { font-size: 28px; }
 .logo small { display: block; color: #64748b; font-size: 11px; }
-.logo b { color: #f1f5f9; font-size: 14px; }
+.logo b { color: #f1f5f9; font-size: 14px; display: block; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sidebar nav { display: flex; flex-direction: column; gap: 2px; }
 .sidebar nav a { padding: 10px 12px; border-radius: 8px; cursor: pointer; font-size: 14px; color: #cbd5e1; }
 .sidebar nav a:hover { background: #1e293b; }
