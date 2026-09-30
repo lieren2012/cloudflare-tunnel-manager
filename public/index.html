@@ -238,22 +238,19 @@
         <pre id="abUpdLog" class="log-view hidden"></pre>
 
         <details class="upd-src">
-          <summary>更新源设置 <span class="muted small">（默认已内置镜像自动切换，一般无需修改）</span></summary>
+          <summary>更新源设置 <span class="muted small">（默认自动切换内置镜像，一般无需修改）</span></summary>
           <label>更新源
             <select id="abMirrorSel">
               <option value="">自动（直连优先，失败自动切换内置镜像）</option>
               <option value="https://v4.gh-proxy.org/">gh-proxy.org（毫秒镜像）</option>
               <option value="https://gh-proxy.com/">gh-proxy.com（毫秒镜像）</option>
               <option value="https://ghfast.top/">ghfast.top</option>
-              <option value="__custom__">自定义加速前缀…</option>
             </select>
           </label>
-          <div id="abMirrorCustom" class="hidden">
-            <label>自定义加速前缀
-              <input id="abMirror" placeholder="如 https://gh-proxy.com/ ，留空=自动">
-            </label>
-          </div>
-          <label>Git 代理
+          <label>自定义加速前缀（高级，选填）
+            <input id="abMirror" placeholder="留空 = 使用上方选择；填写后优先于上方，如 https://your-mirror.example/">
+          </label>
+          <label>Git 代理（选填）
             <input id="abProxy" placeholder="如 http://192.168.1.2:7890，留空=不使用">
           </label>
           <div class="btn-row">

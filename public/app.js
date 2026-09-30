@@ -625,11 +625,15 @@ async function refreshUpdStatus() {
     updStatus = data;
     const sel = $('#abMirrorSel');
     const mirror = (data.sources && data.sources.gitMirror) || '';
-    if (!mirror) sel.value = '';
-    else if ([...sel.options].some(o => o.value === mirror)) sel.value = mirror;
-    else sel.value = '__custom__';
-    $('#abMirrorCustom').classList.toggle('hidden', sel.value !== '__custom__');
-    $('#abMirror').value = mirror;
+    if ([...sel.options].some(o => o.value === mirror)) {
+      // 保存的是某个内置镜像 → 下拉选中，自定义框留空
+      sel.value = mirror;
+      $('#abMirror').value = '';
+    } else {
+      // 空或非内置的自定义值 → 下拉回「自动」，值放自定义框里展示/编辑
+      sel.value = '';
+      $('#abMirror').value = mirror;
+    }
     $('#abProxy').value = (data.sources && data.sources.gitProxy) || '';
     renderUpdBox();
     renderUpdLog();
@@ -637,14 +641,6 @@ async function refreshUpdStatus() {
     $('#abUpdBox').innerHTML = `<span class="err">读取更新状态失败：${esc(e.message)}</span>`;
   }
 }
-
-// 更新源下拉：选「自定义」时展开前缀输入框
-function onMirrorSelChange() {
-  const sel = $('#abMirrorSel');
-  $('#abMirrorCustom').classList.toggle('hidden', sel.value !== '__custom__');
-  if (sel.value === '__custom__') $('#abMirror').focus();
-}
-$('#abMirrorSel').addEventListener('change', onMirrorSelChange);
 
 function renderUpdBox() {
   const d = updStatus || {};
@@ -791,8 +787,8 @@ async function saveUpdSrc() {
   m.textContent = '保存中…';
   m.className = 'msg small';
   try {
-    const sel = $('#abMirrorSel').value;
-    const mirror = sel === '__custom__' ? $('#abMirror').value : sel;
+    // 自定义前缀输入框有值时优先（用户手填的高级选项），否则用下拉选择的内置源
+    const mirror = ($('#abMirror').value || '').trim() || $('#abMirrorSel').value;
     await api('/config', { method: 'POST', body: { gitMirror: mirror, gitProxy: $('#abProxy').value } });
     m.textContent = '✅ 已保存';
     m.className = 'msg small ok';
