@@ -48,8 +48,9 @@
 ## 部署（Docker，推荐 NAS）
 
 ```bash
-# 1. 下载项目
+# 1. 下载项目（国内直连不稳时，把网址换成下面第二行）
 git clone https://github.com/lieren2012/cloudflare-tunnel-manager.git
+# git clone https://v4.gh-proxy.org/https://github.com/lieren2012/cloudflare-tunnel-manager.git
 
 # 2. 构建并启动
 cd cloudflare-tunnel-manager
@@ -62,6 +63,33 @@ docker compose up -d --build
 - 挂载 `./:/app`（compose 已内置）→ 启用面板内一键更新；删掉该挂载则只能用命令行更新
 - `restart: unless-stopped`（compose 已内置）→ 面板内更新后容器能自动拉起
 - 设置环境变量 `ADMIN_PASSWORD` 可开启面板登录（默认关闭，建议仅内网使用）
+
+## 国内网络加速（已内置，通常无需配置）
+
+三个环节都默认走国内可用源，**不用改 `daemon.json`、不用配代理**：
+
+| 环节 | 默认 | 失败兜底 |
+|---|---|---|
+| 拉取/更新代码 | 直连 GitHub | 自动依次切 `v4.gh-proxy.org` → `gh-proxy.com` → `ghfast.top`，成功的会记住 |
+| 拉取基础镜像 | `docker.1ms.run` | `bash update.sh` 构建失败时自动改用官方源重试 |
+| 安装 npm 依赖 | `registry.npmmirror.com` | — |
+
+需要换源时，在项目目录建一个 `.env` 文件（`cp .env.example .env`）即可覆盖：
+
+```ini
+# 基础镜像换回官方 / 换其他加速站
+NODE_IMAGE=node:22-alpine
+CLOUDFLARED_IMAGE=cloudflare/cloudflared:latest
+# NODE_IMAGE=docker.m.daocloud.io/library/node:22-alpine
+```
+
+也可以用命令临时覆盖：
+
+```bash
+NODE_IMAGE=node:22-alpine CLOUDFLARED_IMAGE=cloudflare/cloudflared:latest docker compose up -d --build
+```
+
+> 若你已给 Docker 配了全局镜像加速（`/etc/docker/daemon.json` 里的 `registry-mirrors`），本项目显式写了镜像地址，两者不冲突。
 
 ## 更新
 

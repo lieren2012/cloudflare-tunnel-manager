@@ -1,7 +1,18 @@
 # 多阶段构建：cloudflared 官方镜像 + Node.js 运行时
-FROM cloudflare/cloudflared:latest AS cloudflared
+#
+# 基础镜像默认走国内加速站 docker.1ms.run（免改 daemon.json，开箱可用）。
+# 海外环境或加速站临时不可用时，用官方地址覆盖即可：
+#   docker compose build --build-arg NODE_IMAGE=node:22-alpine \
+#                        --build-arg CLOUDFLARED_IMAGE=cloudflare/cloudflared:latest
+ARG NODE_IMAGE=docker.1ms.run/library/node:22-alpine
+ARG CLOUDFLARED_IMAGE=docker.1ms.run/cloudflare/cloudflared:latest
 
-FROM node:22-alpine
+FROM ${CLOUDFLARED_IMAGE} AS cloudflared
+
+FROM ${NODE_IMAGE}
+
+# 在阶段内重新声明才能用于下面的 RUN
+ARG NPM_REGISTRY=https://registry.npmmirror.com
 
 LABEL org.opencontainers.image.title="CF Tunnel Manager" \
       org.opencontainers.image.description="Cloudflare Tunnel 多隧道管理面板 - 单容器多隧道并行"
@@ -14,7 +25,7 @@ COPY --from=cloudflared /usr/local/bin/cloudflared /usr/local/bin/cloudflared
 
 # 依赖装到独立目录：/app 会被宿主机源码卷覆盖，故依赖不能放在 /app/node_modules
 COPY package.json /opt/deps/package.json
-RUN cd /opt/deps && npm install --omit=dev --registry=https://registry.npmmirror.com
+RUN cd /opt/deps && npm install --omit=dev --registry=${NPM_REGISTRY}
 
 # 源码拷一份进镜像：不挂载源码卷时也能独立运行
 WORKDIR /app

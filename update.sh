@@ -57,10 +57,15 @@ else
 fi
 
 echo "==> 3/4 重建并重启容器..."
-if docker compose version >/dev/null 2>&1; then
-  docker compose up -d --build
-else
-  docker-compose up -d --build
+if docker compose version >/dev/null 2>&1; then DC="docker compose"; else DC="docker-compose"; fi
+
+if ! $DC up -d --build; then
+  echo ""
+  echo "⚠️  构建失败，可能是基础镜像加速站（docker.1ms.run）不可用，改用官方源重试..."
+  if ! NODE_IMAGE=node:22-alpine CLOUDFLARED_IMAGE=cloudflare/cloudflared:latest $DC up -d --build; then
+    echo "❌ 构建仍然失败，请检查上面的报错信息。"
+    exit 1
+  fi
 fi
 
 echo "==> 4/4 清理悬空镜像..."
