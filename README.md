@@ -4,6 +4,8 @@
 
 > 核心增强：**单容器支持多条隧道同时在线**（原版同时只能连 1 条），互不影响、独立启停、异常自动重连。
 
+📖 **[获取 Cloudflare 凭据教程（3 步，1 分钟）](docs/get-credentials.md)** —— 第一次用先看这个。
+
 ## 功能
 
 | 页面 | 说明 |
@@ -108,13 +110,18 @@ cd cloudflare-tunnel-manager && git fetch origin -q && git log --oneline HEAD..o
 > 更新完浏览器按 `Ctrl + F5` 强刷，确保加载到新的前端页面。
 > 面板内更新会以容器用户（root）在你的项目目录里写 git 数据，宿主机上再操作 git 若提示 `dubious ownership`，执行 `git config --global --add safe.directory <项目路径>` 即可。
 
-## 前置准备
+## 前置准备（1 分钟）
 
-1. 一个已托管到 Cloudflare 的域名
-2. Cloudflare 自定义 API Token，最小权限：
-   - **Cloudflare Tunnel**：读取 + 编辑
-   - **DNS**：读取 + 编辑（注意不是「DNS 设置」）
-3. 在「系统配置」页填入 Account ID 与 Token → 测试 → 保存
+只需要两样东西：**Account ID** + **一个 API Token**。👉 **详细图文步骤：[获取 Cloudflare 凭据（3 步）](docs/get-credentials.md)**
+
+1. **Account ID**：登录 <https://dash.cloudflare.com> → 右侧栏「账户 ID」复制（32 位字符）
+2. **API Token**：<https://dash.cloudflare.com/profile/api-tokens> → 创建令牌 → 创建自定义令牌 → 只加两条权限：
+   - 账户 · **Cloudflare Tunnel** · 编辑
+   - 区域 · **DNS** · 编辑
+   - 区域资源选你的域名 → 创建 → 复制令牌（只显示一次）
+3. 面板「系统配置」填入 → 「测试配置」通过 → 「保存配置」
+
+> 面板「系统配置」页内也有同样的折叠说明，不用来回翻文档。
 
 ## 使用
 

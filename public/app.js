@@ -157,7 +157,9 @@ async function refreshDashboard() {
           ${t.local ? '运行 ' + fmtDur(t.local.uptimeSec) + ' · ' : ''}边缘连接 ${t.connections} 条${t.autostart ? ' · 自启' : ''}
         </p>
       </div>`).join('') : '<p class="muted">暂无隧道，前往「Tunnel 列表」创建。</p>';
-    $('#dashHint').textContent = data.configured ? '' : '尚未配置 Cloudflare 凭据，请先前往「系统配置」。';
+    $('#dashHint').innerHTML = data.configured ? '' :
+      '尚未配置 Cloudflare 凭据，请前往「系统配置」填入 Account ID 与 API Token（' +
+      '<a href="https://github.com/lieren2012/cloudflare-tunnel-manager/blob/main/docs/get-credentials.md" target="_blank" rel="noopener">3 步教程</a>）。';
   } catch (e) { $('#dashHint').textContent = '加载失败: ' + e.message; }
 }
 
@@ -302,6 +304,7 @@ async function renameGroup() {
 
 function routeCellHtml(t) {
   const routes = routesCache[t.cfId];
+  if (routes === undefined) return '<span class="muted small">加载中…</span>'; // 规则尚未返回（新建隧道/刷新中）
   if (routes === null) return '<span class="muted small">无法获取</span>';
   if (!routes.length) return '<span class="muted small">暂无规则</span>';
   return routes.map(r => {

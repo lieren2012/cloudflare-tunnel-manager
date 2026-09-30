@@ -121,6 +121,12 @@ button.mini { padding: 5px 10px; font-size: 12px; border-radius: 6px; }
 .upd-src label { display: block; margin: 10px 0 4px; font-size: 13px; font-weight: 500; }
 .upd-src input { width: 100%; max-width: 480px; padding: 8px 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 13px; margin-top: 4px; }
 .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #f87171; margin-left: 6px; vertical-align: middle; }
+/* 系统配置页的凭据获取指引 */
+.cfg-guide { background: #f8fafc; border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; margin-bottom: 6px; }
+.cfg-guide summary { cursor: pointer; font-size: 13px; font-weight: 600; color: var(--primary); }
+.cfg-guide ol { margin: 10px 0 8px 18px; }
+.cfg-guide ol li { margin: 6px 0; line-height: 1.7; }
+.cfg-guide p { margin: 0; line-height: 1.7; }
 .fedit { text-decoration: none; }
 button:disabled { opacity: .6; cursor: not-allowed; }
 

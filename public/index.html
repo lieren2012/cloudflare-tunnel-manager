@@ -93,6 +93,21 @@
       </div>
       <div class="card form-card">
         <h3>Cloudflare 账号</h3>
+        <details class="cfg-guide">
+          <summary>📖 怎么拿 Account ID 和 API Token？（3 步，1 分钟）</summary>
+          <ol class="muted small">
+            <li><b>Account ID</b>：打开 <a href="https://dash.cloudflare.com" target="_blank" rel="noopener">dash.cloudflare.com</a> → 右侧栏「账户 ID」→ 复制（32 位字符）</li>
+            <li><b>API Token</b>：打开 <a href="https://dash.cloudflare.com/profile/api-tokens" target="_blank" rel="noopener">API 令牌页面</a> → 创建令牌 → 最下面「创建自定义令牌」→ 只加两条权限：
+              <br>　• 账户 · <b>Cloudflare Tunnel</b> · <b>编辑</b>
+              <br>　• 区域 · <b>DNS</b> · <b>编辑</b>
+              <br>　区域资源选你的域名 → 继续 → 创建 → <b>复制令牌（只显示一次）</b>
+            </li>
+            <li>把两串字符填到下面两个框 → 点「测试配置」显示通过 → 点「保存配置」</li>
+          </ol>
+          <p class="muted small">⚠️ 不要用「Global API Key」（全局密钥权限过大）；填错最常见的原因是令牌没复制全、或权限少给了 DNS。
+            <a href="https://github.com/lieren2012/cloudflare-tunnel-manager/blob/main/docs/get-credentials.md" target="_blank" rel="noopener">查看完整教程与常见问题 →</a>
+          </p>
+        </details>
         <label>账号 ID（Account ID）<input id="cfgAccount" placeholder="Cloudflare Account ID"></label>
         <label>API 令牌（API Token）<input id="cfgToken" type="password" placeholder="留空表示不修改已保存的令牌"></label>
         <p class="muted">令牌需授予 <b>Cloudflare Tunnel（读取+编辑）</b> 与 <b>DNS（读取+编辑）</b> 权限。</p>
