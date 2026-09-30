@@ -1,3 +1,7 @@
 * text=auto
 *.sh text eol=lf
 Dockerfile text eol=lf
+# .env / compose 若带 CRLF，变量值会混入 \r 导致构建参数错乱
+.env text eol=lf
+.env.example text eol=lf
+docker-compose.yml text eol=lf
