@@ -255,6 +255,22 @@ async function apply() {
   const after = await head();
   state.to = after;
   writeLog(`[update] 代码已更新：${after.short} ${after.subject}`);
+  writeLog(`[update] 如需回退：git reset --hard ${c.current.hash}`);
+  // 刷新检测缓存：刚更新完就不再提示「有新版本」，避免重启后误报
+  store.updateConfig({
+    updateCache: {
+      checkedAt: new Date().toISOString(),
+      hasUpdate: false,
+      behind: 0,
+      commits: [],
+      latestVersion: getVersion(),
+      latestShort: after.short,
+      latestSubject: after.subject,
+      version: getVersion(),
+      error: '',
+      supported: true,
+    },
+  });
   writeLog('[update] 重启面板以加载新版本…');
   state.phase = 'restarting';
   return { updated: true, from: c.current, to: after, behind: c.behind, restartInMs: 1500 };
