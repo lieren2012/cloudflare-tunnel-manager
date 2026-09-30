@@ -190,11 +190,27 @@ Node.js 22 + Express，前端原生单页（无构建步骤），cloudflared 由
 
 ## 文档站（VitePress）
 
-在线版：<https://lieren2012.github.io/cloudflare-tunnel-manager/>
+📖 **在线文档：<https://lieren2012.github.io/cloudflare-tunnel-manager/>**（GitHub Pages 托管，可绑自定义域名）
 
-文档源码在 `docs/`，用 VitePress 构建，**推送到 `main` 后由 GitHub Actions 自动部署**到 GitHub Pages（见 `.github/workflows/docs.yml`）。
+文档源码在 `docs/`，用 VitePress 构建。发布方式有两种：
 
-本地预览 / 构建：
+**方式一：一键发布（当前使用，无需任何额外授权）**
+
+```bash
+bash scripts/publish-docs.sh
+```
+
+脚本会构建文档站并把产物推送到 `gh-pages` 分支，GitHub Pages 直接从该分支提供页面，约 30~60 秒后生效。内容无变化时会自动跳过，不产生多余提交。
+
+**方式二：推代码自动部署（可选）**
+
+`deploy/github-workflows/docs.yml` 是准备好的自动部署工作流，暂未启用——推送 `.github/workflows/` 下的文件要求令牌具备 `workflow` 权限。想启用：
+
+1. `gh auth refresh -h github.com -s workflow` 补权限
+2. `mkdir -p .github/workflows && git mv deploy/github-workflows/docs.yml .github/workflows/docs.yml` 后提交推送
+3. 仓库 Settings → Pages → Source 改为 **GitHub Actions**
+
+**本地预览 / 构建**
 
 ```bash
 npm install
@@ -202,6 +218,10 @@ npm run docs:dev      # 本地预览（默认 http://localhost:5173）
 npm run docs:build    # 构建到 docs/.vitepress/dist
 npm run docs:preview  # 预览构建产物
 ```
+
+> 部署到 `二级子路径` 时要设置 `DOCS_BASE`（GitHub Pages 项目页为仓库名）：
+> `DOCS_BASE=cloudflare-tunnel-manager npm run docs:build`。
+> **别写成带前导斜杠的形式**——Git Bash 会把 `/cloudflare-tunnel-manager/` 当路径转换成 Windows 盘符路径，导致产物资源路径全错（配置里已做归一化，但值不带斜杠最稳）。
 
 > 文档站是独立的静态站点，**不参与 Docker 镜像构建**（`vitepress` 在 `devDependencies` 里，镜像安装依赖用 `--omit=dev`）。
 

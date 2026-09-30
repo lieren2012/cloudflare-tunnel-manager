@@ -1,0 +1,70 @@
+# ⚠️ 此文件不生效，只是「备用」——GitHub 只识别 .github/workflows/ 下的工作流。
+#
+# 为什么放这里：GitHub 规定「推送 .github/workflows/ 下的文件」必须使用带 workflow 权限的令牌，
+# 当前授权缺少该权限（连 .pending 后缀都会被拒），所以本仓库改用
+# scripts/publish-docs.sh 手动发布文档到 gh-pages 分支。
+#
+# 想改回「推代码自动部署」，三步即可：
+#   1. 补授权：gh auth refresh -h github.com -s workflow
+#   2. 启用工作流：
+#        mkdir -p .github/workflows && git mv deploy/github-workflows/docs.yml .github/workflows/docs.yml
+#      然后提交推送（此时令牌已带 workflow 权限，不会再被拒）
+#   3. 仓库 Settings → Pages → Source：由 "Deploy from a branch (gh-pages)" 改为 "GitHub Actions"
+
+name: Deploy Docs
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'docs/**'
+      - 'package.json'
+      - '.github/workflows/docs.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Build docs
+        run: npm run docs:build
+        env:
+          DOCS_BASE: cloudflare-tunnel-manager
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs/.vitepress/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
