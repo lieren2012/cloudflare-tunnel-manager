@@ -11,15 +11,17 @@ SSH 到你的 NAS 或服务器：
 git clone https://github.com/lieren2012/cloudflare-tunnel-manager.git
 # git clone https://v4.gh-proxy.org/https://github.com/lieren2012/cloudflare-tunnel-manager.git
 
-# 2. 构建并启动
+# 2. 启动（默认使用预构建镜像）
 cd cloudflare-tunnel-manager
-docker compose up -d --build
+docker compose up -d
 ```
 
-构建会自动从 `docker.1ms.run` 拉取基础镜像、从 `registry.npmmirror.com` 装 npm 依赖，国内一般 1~3 分钟。
+默认直接拉取 GitHub Actions 发布的多架构镜像，不在 NAS 本地编译 Node 项目，也不需要先拉取 Node 和 cloudflared 的构建阶段镜像。
 
-::: tip 首次构建较慢是正常的
-主要耗时在拉取 `node:22-alpine` 和 `cloudflare/cloudflared` 两个基础镜像（合计约 100MB）。第二次重建会用缓存，几秒就好。
+仓库维护者首次发布后需要把 GitHub Packages 中的镜像设为 Public；如果镜像保持私有，NAS 需先执行 `docker login ghcr.io`。
+
+::: tip 镜像拉取失败时再本地构建
+如果所在网络无法访问 GHCR，执行 `docker compose up -d --build`。本地构建默认使用 `docker.m.daocloud.io`，并且 npm 安装关闭 audit/fund 检查；依赖不变时 Docker 会复用缓存。
 :::
 
 ## 第二步：打开面板

@@ -1,0 +1,15 @@
+.git
+.gitignore
+.github
+data
+node_modules
+docs
+deploy
+scripts
+*.log
+*.zip
+.env
+Dockerfile*
+docker-compose*.yml
+README.md
+LICENSE

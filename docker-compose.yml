@@ -1,13 +1,15 @@
 services:
   cf-tunnel-manager:
-    image: cf-tunnel-manager:latest
+    # 已发布的多架构镜像优先使用，避免 NAS 每次本地拉 Node/cloudflared 并重新安装依赖。
+    # 镜像不可用时仍可用 `docker compose up -d --build` 走本地构建。
+    image: ${CFM_IMAGE:-ghcr.io/lieren2012/cloudflare-tunnel-manager:latest}
     build:
       context: .
-      # 基础镜像默认走国内加速站（docker.1ms.run），可在项目目录的 .env 里覆盖，
+      # 本地构建默认走国内常用加速站，可在项目目录的 .env 里覆盖，
       # 例如切回官方源：NODE_IMAGE=node:22-alpine
       args:
-        NODE_IMAGE: ${NODE_IMAGE:-docker.1ms.run/library/node:22-alpine}
-        CLOUDFLARED_IMAGE: ${CLOUDFLARED_IMAGE:-docker.1ms.run/cloudflare/cloudflared:latest}
+        NODE_IMAGE: ${NODE_IMAGE:-docker.m.daocloud.io/library/node:22-alpine}
+        CLOUDFLARED_IMAGE: ${CLOUDFLARED_IMAGE:-docker.m.daocloud.io/cloudflare/cloudflared:latest}
         NPM_REGISTRY: ${NPM_REGISTRY:-https://registry.npmmirror.com}
     container_name: cf-tunnel-manager
     restart: unless-stopped

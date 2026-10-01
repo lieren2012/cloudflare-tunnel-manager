@@ -7,6 +7,7 @@ const crypto = require('crypto');
 const store = require('./store');
 const tunnelMgr = require('./tunnels');
 const cfd = require('./cloudflare');
+const APP_VERSION = require('../package.json').version;
 
 function checkKey(req) {
   const key = req.get('X-API-Key') || (req.get('Authorization') || '').replace(/^Bearer\s+/i, '');
@@ -102,7 +103,7 @@ function createExternalApi() {
   app.use('/api/v1', buildRouter());
   app.get('/', (req, res) => res.json({
     name: 'CF Tunnel Manager External API',
-    version: '1.0.0',
+    version: APP_VERSION,
     auth: 'X-API-Key header',
     endpoints: [
       'GET  /api/v1/tunnels',

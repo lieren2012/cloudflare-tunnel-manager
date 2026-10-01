@@ -5,6 +5,7 @@
 const store = require('./store');
 const tunnelMgr = require('./tunnels');
 const cfd = require('./cloudflare');
+const APP_VERSION = require('../package.json').version;
 
 const PROTOCOL_VERSION = '2024-11-05';
 
@@ -99,7 +100,7 @@ function createMcpServer() {
         return jsonRpc(res, id, {
           protocolVersion: PROTOCOL_VERSION,
           capabilities: { tools: {} },
-          serverInfo: { name: 'cf-tunnel-manager', version: '1.0.0' },
+          serverInfo: { name: 'cf-tunnel-manager', version: APP_VERSION },
         });
       }
       if (method === 'tools/list') {
