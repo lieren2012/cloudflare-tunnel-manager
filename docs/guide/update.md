@@ -28,7 +28,7 @@
 bash update.sh
 ```
 
-脚本会：**先直连 GitHub，失败自动依次切换内置镜像**（`v4.gh-proxy.org` → `gh-proxy.com` → `ghfast.top`），全部以 HTTP/1.1 发起，最后自动重建容器。
+脚本会：**先直连 GitHub，失败自动依次切换内置镜像**（`v4.gh-proxy.org` → `gh-proxy.com` → `ghfast.top`），全部以 HTTP/1.1 发起；代码更新后优先拉取预构建多架构镜像，镜像不可用时才本地构建。
 
 ### 直接敲命令
 
@@ -65,7 +65,7 @@ cd cloudflare-tunnel-manager && git -c http.version=HTTP/1.1 fetch origin -q && 
 | 环节 | 默认 | 失败兜底 |
 |---|---|---|
 | 拉取/更新代码 | 直连 GitHub | 自动依次切 `v4.gh-proxy.org` → `gh-proxy.com` → `ghfast.top`，成功的会**记住**下次优先用 |
-| 拉取基础镜像 | `docker.1ms.run` | `bash update.sh` 构建失败时自动改用官方源重试 |
+| 拉取基础镜像（本地回退构建） | `docker.m.daocloud.io` | `bash update.sh` 构建失败时自动改用官方源重试 |
 | 安装 npm 依赖 | `registry.npmmirror.com` | — |
 
 ### 更新源是怎么选的

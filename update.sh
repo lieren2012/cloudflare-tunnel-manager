@@ -56,14 +56,16 @@ else
   echo "    当前版本：$(git log --oneline -1)"
 fi
 
-echo "==> 3/4 重建并重启容器..."
+echo "==> 3/4 更新并重启容器..."
 if docker compose version >/dev/null 2>&1; then DC="docker compose"; else DC="docker-compose"; fi
 
-if ! $DC up -d --build; then
+if ! $DC up -d --pull always; then
   echo ""
-  echo "⚠️  构建失败，可能是基础镜像加速站（docker.1ms.run）不可用，改用官方源重试..."
-  if ! NODE_IMAGE=node:22-alpine CLOUDFLARED_IMAGE=cloudflare/cloudflared:latest $DC up -d --build; then
-    echo "❌ 构建仍然失败，请检查上面的报错信息。"
+  echo "⚠️ 预构建镜像不可用，改走本地构建..."
+  if $DC up -d --build; then
+    echo "    本地构建成功"
+  elif ! NODE_IMAGE=node:22-alpine CLOUDFLARED_IMAGE=cloudflare/cloudflared:latest $DC up -d --build; then
+    echo "❌ 预构建镜像和本地构建均失败，请检查上面的报错信息。"
     exit 1
   fi
 fi
