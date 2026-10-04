@@ -33,6 +33,18 @@ jobs:
           sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
       - name: Install frontend dependencies
         run: npm install
+      - name: Smoke test local service
+        shell: bash
+        run: |
+          rm -rf .ci-data
+          DATA_DIR="$PWD/.ci-data" WEB_PORT=19090 API_PORT=19092 MCP_PORT=19093 node src/server.js > .ci-server.log 2>&1 &
+          server_pid=$!
+          trap 'kill $server_pid 2>/dev/null || true' EXIT
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:19090/api/auth/state > .ci-state.json; then break; fi
+            sleep 1
+          done
+          node -e "const s=require('./.ci-state.json'); if(!s.success || !s.data.needsSetup) { console.error(s); process.exit(1) }; console.log('auth state smoke test ok')"
       - name: Download bundled Node runtime (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
