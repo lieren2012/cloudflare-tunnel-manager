@@ -1,0 +1,55 @@
+name: Build desktop releases
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            suffix: windows
+          - os: macos-latest
+            suffix: macos
+          - os: ubuntu-22.04
+            suffix: linux
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install Linux WebKit dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+      - name: Install frontend dependencies
+        run: npm install
+      - name: Build Tauri bundle
+        run: npx tauri build --config desktop/src-tauri/tauri.conf.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cfm-${{ matrix.suffix }}
+          path: desktop/src-tauri/target/release/bundle/**
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: release-assets
+          pattern: cfm-*
+          merge-multiple: true
+      - name: Upload release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: find release-assets -type f -exec gh release upload "${{ github.ref_name }}" {} --clobber --repo "${{ github.repository }}" \;
