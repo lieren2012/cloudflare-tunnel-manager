@@ -9,3 +9,5 @@ Thumbs.db
 docs/.vitepress/dist/
 docs/.vitepress/cache/
 docs/.vitepress/*.timestamp-*.mjs
+
+desktop/src-tauri/target/
