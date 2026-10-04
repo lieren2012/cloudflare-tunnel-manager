@@ -1,5 +1,7 @@
 # CF Tunnel Manager
 
+当前版本：**v1.7.0**。提供 `install.sh` 一键安装/升级与 `uninstall.sh` 卸载脚本。
+
 参考「飞牛 Cloudflare Tunnel (NasPK)」重构的 **Cloudflare Tunnel 多隧道管理面板**。
 
 > 核心增强：**单容器支持多条隧道同时在线**（原版同时只能连 1 条），互不影响、独立启停、异常自动重连。
@@ -48,6 +50,28 @@
 | 19093 | MCP 服务（Streamable HTTP，`X-API-Key` 鉴权） |
 
 ## 部署（Docker，推荐 NAS）
+
+### 一键安装 / 升级（v1.7.0）
+
+脚本会对 GitHub 直连和内置加速源测速，自动选择可用且最快的源，然后拉取代码、构建并启动容器，最后输出面板 IP 和端口：
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/lieren2012/cloudflare-tunnel-manager/main/install.sh | bash
+```
+
+已有目录也可直接执行：
+
+```bash
+bash install.sh
+```
+
+卸载容器并保留配置数据：
+
+```bash
+bash uninstall.sh
+```
+
+如需连数据一起删除，请在确认备份后手动删除项目目录下的 `data/`。
 
 ```bash
 # 1. 下载项目（国内直连不稳时，把网址换成下面第二行）
