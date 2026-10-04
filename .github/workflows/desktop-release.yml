@@ -57,7 +57,8 @@ jobs:
         if: runner.os != 'Windows'
         run: |
           mkdir -p desktop/src-tauri/runtime
-          curl -fsSL https://nodejs.org/dist/v20.19.5/node-v20.19.5-${{ runner.os == 'macOS' && 'darwin-x64' || 'linux-x64' }}.tar.gz | tar xz --strip-components=2 -C desktop/src-tauri/runtime '*/bin/node'
+          curl -fsSL https://nodejs.org/dist/v20.19.5/node-v20.19.5-${{ runner.os == 'macOS' && 'darwin-x64' || 'linux-x64' }}.tar.gz -o node.tar.gz
+          tar -xzf node.tar.gz --strip-components=2 -C desktop/src-tauri/runtime
       - name: Build Tauri bundle
         run: npx tauri build --config desktop/src-tauri/tauri.conf.json
       - uses: actions/upload-artifact@v4
