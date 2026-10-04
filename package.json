@@ -11,15 +11,16 @@
     "docs:preview": "vitepress preview docs"
     ,"desktop:dev": "tauri dev"
     ,"desktop:build": "tauri build"
+    ,"version:set": "node scripts/set-version.mjs"
   },
   "engines": {
     "node": ">=18"
   },
   "dependencies": {
-    "express": "^4.19.2"
+    "express": "^1.8.0"
   },
   "devDependencies": {
-    "vitepress": "^1.6.4",
-    "@tauri-apps/cli": "^2.7.0"
+    "vitepress": "^1.8.0",
+    "@tauri-apps/cli": "^1.8.0"
   }
 }

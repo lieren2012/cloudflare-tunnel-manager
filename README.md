@@ -2,6 +2,8 @@
 
 当前版本：**v1.8.0**。提供 `install.sh` 一键安装/升级与 `uninstall.sh` 卸载脚本。
 
+发布新版本时运行 `npm run version:set -- 1.8.0`，会同步更新 Docker、Tauri 和文档中的版本号。
+
 参考「飞牛 Cloudflare Tunnel (NasPK)」重构的 **Cloudflare Tunnel 多隧道管理面板**。
 
 > 核心增强：**单容器支持多条隧道同时在线**（原版同时只能连 1 条），互不影响、独立启停、异常自动重连。
@@ -133,7 +135,7 @@ NODE_IMAGE=node:22-alpine CLOUDFLARED_IMAGE=cloudflare/cloudflared:latest docker
 
 > ⚠️ **首次启用需要手动更新一次**：旧版本容器内没有源码挂载与新镜像，需先执行一次下面「方式二」，之后就能一直在面板里更新了。
 >
-> **更新源自动切换（默认内置，无需配置）**：检测更新时先直连 GitHub（25 秒快速失败），失败后自动依次尝试内置镜像 `v4.gh-proxy.org` → `gh-proxy.com` → `ghfast.top`，成功的镜像会被记住，下次优先使用。所有 git 网络操作均以 HTTP/1.1 发起，可规避国内常见的 `HTTP/2 stream was not closed cleanly` 报错。也可在「关于」页的「更新源设置」里**固定指定**某个镜像（下拉选择或自定义加速前缀），或填 **Git 代理**（如 `http://192.168.1.2:7890`）。
+> **更新源自动切换（默认内置，无需配置）**：检测更新时先直连 GitHub（25 秒快速失败），失败后自动依次尝试内置镜像 `v4.gh-proxy.org` → `gh-proxy.com` → `ghfast.top`，成功的镜像会被记住，下次优先使用。所有 git 网络操作均以 HTTP/1.1 发起，可规避国内常见的 `HTTP/2 stream was not closed cleanly` 报错。也可在「关于」页的「更新源设置」里**固定指定**某个镜像（下拉选择或自定义加速前缀），或填 **Git 代理**（如 `http://1.8.0.2:7890`）。
 >
 > 更新记录了回退信息：若新版启动异常，可在 NAS 上 `git reset --hard <更新前的提交>` 后重建容器（更新日志里能看到该提交号）。
 
@@ -189,7 +191,7 @@ cd cloudflare-tunnel-manager && git -c http.version=HTTP/1.1 fetch origin -q && 
 
 1. 「Tunnel 列表」→ 新建 Tunnel（输入名称即可）
 2. 点击「连接」——多条隧道可以逐条连接，同时在线
-3. 点击「路由」→ 添加规则：`nas.example.com` → `http://192.168.1.10:5000`（自动创建 CNAME）
+3. 点击「路由」→ 添加规则：`nas.example.com` → `http://1.8.0.10:5000`（自动创建 CNAME）
 4. 打开「自启」开关的隧道会在容器重启后自动重连（相当于开机自启）
 
 ## 外部 API 示例
