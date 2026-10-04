@@ -7,6 +7,14 @@
     "frontendDist": "../../public",
     "devUrl": "http://127.0.0.1:19090"
   },
+  "bundle": {
+    "resources": ["../../src", "../../public", "../../node_modules", "../../package.json", "runtime"],
+    "active": true,
+    "icon": ["icons/icon.png", "icons/icon.ico"],
+    "targets": "all",
+    "windows": { "webviewInstallMode": { "type": "embedBootstrapper" } },
+    "macOS": { "minimumSystemVersion": "10.15" }
+  },
   "app": {
     "windows": [{
       "title": "Cloudflare Tunnel 管理面板",
@@ -18,11 +26,5 @@
     }],
     "security": { "csp": null }
   },
-  "bundle": {
-    "active": true,
-    "icon": ["icons/icon.png", "icons/icon.ico"],
-    "targets": "all",
-    "windows": { "webviewInstallMode": { "type": "embedBootstrapper" } },
-    "macOS": { "minimumSystemVersion": "10.15" }
-  }
+  "plugins": {}
 }

@@ -33,6 +33,19 @@ jobs:
           sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
       - name: Install frontend dependencies
         run: npm install
+      - name: Download bundled Node runtime (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force desktop/src-tauri/runtime | Out-Null
+          Invoke-WebRequest https://nodejs.org/dist/v20.19.5/node-v20.19.5-win-x64.zip -OutFile node.zip
+          Expand-Archive node.zip node-extracted
+          Copy-Item node-extracted/node-v20.19.5-win-x64/node.exe desktop/src-tauri/runtime/node.exe
+      - name: Download bundled Node runtime (Unix)
+        if: runner.os != 'Windows'
+        run: |
+          mkdir -p desktop/src-tauri/runtime
+          curl -fsSL https://nodejs.org/dist/v20.19.5/node-v20.19.5-${{ runner.os == 'macOS' && 'darwin-x64' || 'linux-x64' }}.tar.gz | tar xz --strip-components=2 -C desktop/src-tauri/runtime '*/bin/node'
       - name: Build Tauri bundle
         run: npx tauri build --config desktop/src-tauri/tauri.conf.json
       - uses: actions/upload-artifact@v4
