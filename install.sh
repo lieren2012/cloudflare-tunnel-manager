@@ -44,4 +44,4 @@ else
 fi
 cd "$APP_DIR"; mkdir -p data; "${DC[@]}" up -d --build
 ip=$(hostname -I 2>/dev/null | awk '{print $1}'); [ -n "$ip" ] || ip="127.0.0.1"
-echo ""; echo "✅ CF Tunnel Manager v1.7.0 安装/升级完成"; echo "   面板地址: http://${ip}:${PORT}"; echo "   数据目录: ${APP_DIR}/data"; echo "   卸载命令: bash ${APP_DIR}/uninstall.sh"
+echo ""; echo "✅ CF Tunnel Manager v1.8.0 安装/升级完成"; echo "   面板地址: http://${ip}:${PORT}"; echo "   数据目录: ${APP_DIR}/data"; echo "   卸载命令: bash ${APP_DIR}/uninstall.sh"
