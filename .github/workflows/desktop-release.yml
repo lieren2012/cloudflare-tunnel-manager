@@ -60,7 +60,13 @@ jobs:
           curl -fsSL https://nodejs.org/dist/v20.19.5/node-v20.19.5-${{ runner.os == 'macOS' && 'darwin-x64' || 'linux-x64' }}.tar.gz -o node.tar.gz
           tar -xzf node.tar.gz --strip-components=2 -C desktop/src-tauri/runtime
       - name: Build Tauri bundle
-        run: npx tauri build --config desktop/src-tauri/tauri.conf.json
+        shell: bash
+        run: |
+          if [ "$RUNNER_OS" = "Linux" ]; then
+            npx tauri build --config desktop/src-tauri/tauri.conf.json --bundles deb
+          else
+            npx tauri build --config desktop/src-tauri/tauri.conf.json
+          fi
       - uses: actions/upload-artifact@v4
         with:
           name: cfm-${{ matrix.suffix }}
