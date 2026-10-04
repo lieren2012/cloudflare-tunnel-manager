@@ -52,4 +52,6 @@ jobs:
       - name: Upload release assets
         env:
           GH_TOKEN: ${{ github.token }}
-        run: find release-assets -type f -exec gh release upload "${{ github.ref_name }}" {} --clobber --repo "${{ github.repository }}" \;
+        run: |
+          find release-assets -type f \( -iname '*.exe' -o -iname '*.msi' -o -iname '*.dmg' -o -iname '*.appimage' -o -iname '*.deb' \) -print0 \
+            | xargs -0 -r -n1 gh release upload "${{ github.ref_name }}" --clobber --repo "${{ github.repository }}"
