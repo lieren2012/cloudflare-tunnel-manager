@@ -53,7 +53,7 @@
 
 ### 一键安装 / 升级（v1.7.0）
 
-脚本会对 GitHub 直连和内置加速源测速，自动选择可用且最快的源，然后拉取代码、构建并启动容器，最后输出面板 IP 和端口：
+脚本会对 GitHub 直连和内置加速源测速，自动选择可用且最快的源，然后拉取代码、构建并启动容器，最后输出面板 IP 和端口。脚本会优先复用当前目录或 `$HOME/cloudflare-tunnel-manager` 中的已有安装，并在升级前备份 `data/`，因此不会清空已有账号、隧道和凭据：
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/lieren2012/cloudflare-tunnel-manager/main/install.sh | bash
