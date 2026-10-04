@@ -1,0 +1,27 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "CF Tunnel Manager",
+  "version": "1.7.0",
+  "identifier": "com.lieren2012.cf-tunnel-manager",
+  "build": {
+    "frontendDist": "../../public",
+    "devUrl": "http://127.0.0.1:19090"
+  },
+  "app": {
+    "windows": [{
+      "title": "Cloudflare Tunnel 管理面板",
+      "width": 1280,
+      "height": 820,
+      "minWidth": 980,
+      "minHeight": 640,
+      "resizable": true
+    }],
+    "security": { "csp": null }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "windows": { "webviewInstallMode": { "type": "embedBootstrapper" } },
+    "macOS": { "minimumSystemVersion": "10.15" }
+  }
+}
