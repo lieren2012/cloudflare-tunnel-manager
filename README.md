@@ -78,12 +78,15 @@ bash uninstall.sh
 git clone https://github.com/lieren2012/cloudflare-tunnel-manager.git
 # git clone https://v4.gh-proxy.org/https://github.com/lieren2012/cloudflare-tunnel-manager.git
 
-# 2. 构建并启动
+# 2. 启动（优先拉取多架构预构建镜像，不在 NAS 本地编译）
 cd cloudflare-tunnel-manager
-docker compose up -d --build
+docker compose up -d
 ```
 
 - 默认使用 `network_mode: host`，cloudflared 可直接访问宿主机内网服务
+- 默认优先使用 `ghcr.io/lieren2012/cloudflare-tunnel-manager:latest` 多架构镜像，首次启动不需要在 NAS 下载 Node 基础镜像、安装 npm 依赖或本地构建
+- 如果镜像源不可用，使用 `docker compose up -d --build` 回退到本地构建
+- 首次发布后请在 GitHub Packages 将该镜像设为 Public；若保持私有，NAS 需要先执行 `docker login ghcr.io`
 - 不想用 host 网络时改用 `ports` 映射，隧道服务地址填宿主机 IP
 - 数据（凭据/配置/凭证/会话）持久化在 `./data/`
 - 挂载 `./:/app`（compose 已内置）→ 启用面板内一键更新；删掉该挂载则只能用命令行更新
@@ -97,13 +100,13 @@ docker compose up -d --build
 | 环节 | 默认 | 失败兜底 |
 |---|---|---|
 | 拉取/更新代码 | 直连 GitHub | 自动依次切 `v4.gh-proxy.org` → `gh-proxy.com` → `ghfast.top`，成功的会记住 |
-| 拉取基础镜像 | `docker.1ms.run` | `bash update.sh` 构建失败时自动改用官方源重试 |
+| 拉取基础镜像（本地回退构建） | `docker.m.daocloud.io` | `bash update.sh` 自动回退官方源 |
 | 安装 npm 依赖 | `registry.npmmirror.com` | — |
 
 需要换源时，在项目目录建一个 `.env` 文件（`cp .env.example .env`）即可覆盖：
 
 ```ini
-# 基础镜像换回官方 / 换其他加速站
+# 预构建镜像拉取失败时，才需要设置本地构建基础镜像
 NODE_IMAGE=node:22-alpine
 CLOUDFLARED_IMAGE=cloudflare/cloudflared:latest
 # NODE_IMAGE=docker.m.daocloud.io/library/node:22-alpine

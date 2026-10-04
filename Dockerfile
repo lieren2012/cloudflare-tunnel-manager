@@ -1,11 +1,11 @@
 # 多阶段构建：cloudflared 官方镜像 + Node.js 运行时
 #
-# 基础镜像默认走国内加速站 docker.1ms.run（免改 daemon.json，开箱可用）。
+# 基础镜像默认走国内常用加速站（免改 daemon.json，开箱可用）。
 # 海外环境或加速站临时不可用时，用官方地址覆盖即可：
 #   docker compose build --build-arg NODE_IMAGE=node:22-alpine \
 #                        --build-arg CLOUDFLARED_IMAGE=cloudflare/cloudflared:latest
-ARG NODE_IMAGE=docker.1ms.run/library/node:22-alpine
-ARG CLOUDFLARED_IMAGE=docker.1ms.run/cloudflare/cloudflared:latest
+ARG NODE_IMAGE=docker.m.daocloud.io/library/node:22-alpine
+ARG CLOUDFLARED_IMAGE=docker.m.daocloud.io/cloudflare/cloudflared:latest
 
 FROM ${CLOUDFLARED_IMAGE} AS cloudflared
 
@@ -26,7 +26,7 @@ COPY --from=cloudflared /usr/local/bin/cloudflared /usr/local/bin/cloudflared
 
 # 依赖装到独立目录：/app 会被宿主机源码卷覆盖，故依赖不能放在 /app/node_modules
 COPY package.json /opt/deps/package.json
-RUN cd /opt/deps && npm install --omit=dev --registry=${NPM_REGISTRY}
+RUN cd /opt/deps && npm install --omit=dev --no-audit --no-fund --prefer-offline --registry=${NPM_REGISTRY}
 
 # 源码拷一份进镜像：不挂载源码卷时也能独立运行
 WORKDIR /app
