@@ -551,10 +551,10 @@ app.get(/^(?!\/api\/).*/, (req, res) => res.sendFile(path.join(PUB, 'index.html'
 
 // ---------- 启动三个服务 ----------
 
-app.listen(WEB_PORT, () => console.log(`[web] 管理面板: http://0.0.0.0:${WEB_PORT}`));
+app.listen(WEB_PORT, process.env.CFM_BIND_HOST || '0.0.0.0', () => console.log(`[web] 管理面板: http://0.0.0.0:${WEB_PORT}`));
 
-external.createExternalApi().listen(API_PORT, () => console.log(`[api] 外部 API: http://0.0.0.0:${API_PORT}/api/v1`));
-mcp.createMcpServer().listen(MCP_PORT, () => console.log(`[mcp] MCP 服务: http://0.0.0.0:${MCP_PORT}/mcp`));
+external.createExternalApi().listen(API_PORT, process.env.CFM_BIND_HOST || '0.0.0.0', () => console.log(`[api] 外部 API: http://0.0.0.0:${API_PORT}/api/v1`));
+mcp.createMcpServer().listen(MCP_PORT, process.env.CFM_BIND_HOST || '0.0.0.0', () => console.log(`[mcp] MCP 服务: http://0.0.0.0:${MCP_PORT}/mcp`));
 
 // 启动后自动拉起自启隧道
 setTimeout(async () => {

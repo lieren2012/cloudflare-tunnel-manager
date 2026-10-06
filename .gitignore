@@ -11,3 +11,5 @@ docs/.vitepress/cache/
 docs/.vitepress/*.timestamp-*.mjs
 
 desktop/src-tauri/target/
+
+desktop/src-tauri/runtime/

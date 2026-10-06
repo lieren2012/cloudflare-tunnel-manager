@@ -846,9 +846,9 @@ async function boot() {
   } catch (_) {
     // 桌面端首次启动时本地服务可能仍在启动；没有可读取的会话状态时，
     // 默认展示初始化注册界面，避免把全新安装误显示成登录页。
-    showLoginView('setup');
-    const err = $('#authErr1');
-    if (err) err.textContent = '正在初始化本地服务，请稍后重试';
+    showLoginView('login');
+    const err = $('#authErr');
+    if (err) err.textContent = '无法连接本地服务，请重启应用并检查 service.log';
   }
 })();
 $('#loginPwd').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });

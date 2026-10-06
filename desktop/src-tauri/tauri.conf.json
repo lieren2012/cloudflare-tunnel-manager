@@ -8,23 +8,39 @@
     "devUrl": "http://127.0.0.1:19090"
   },
   "bundle": {
-    "resources": ["../../src", "../../public", "../../node_modules", "../../package.json", "runtime"],
+    "resources": [
+      "runtime"
+    ],
     "active": true,
-    "icon": ["icons/icon.png", "icons/icon.ico"],
+    "icon": [
+      "icons/icon.png",
+      "icons/icon.ico"
+    ],
     "targets": "all",
-    "windows": { "webviewInstallMode": { "type": "embedBootstrapper" } },
-    "macOS": { "minimumSystemVersion": "10.15" }
+    "windows": {
+      "webviewInstallMode": {
+        "type": "embedBootstrapper"
+      }
+    },
+    "macOS": {
+      "minimumSystemVersion": "10.15"
+    }
   },
   "app": {
-    "windows": [{
-      "title": "Cloudflare Tunnel 管理面板",
-      "width": 1280,
-      "height": 820,
-      "minWidth": 980,
-      "minHeight": 640,
-      "resizable": true
-    }],
-    "security": { "csp": null }
+    "windows": [
+      {
+        "title": "Cloudflare Tunnel 管理面板",
+        "width": 1280,
+        "height": 820,
+        "minWidth": 980,
+        "minHeight": 640,
+        "resizable": true,
+        "visible": false
+      }
+    ],
+    "security": {
+      "csp": null
+    }
   },
   "plugins": {}
 }
