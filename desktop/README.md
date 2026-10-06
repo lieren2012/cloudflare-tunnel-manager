@@ -1,21 +1,19 @@
 # CF Tunnel Manager Desktop
 
-轻量桌面端使用 Tauri 2，安装包只包含桌面壳和前端资源；Node 服务与
-`cloudflared` 在首次启动时下载到用户数据目录并缓存，避免把运行时塞进安装包。
+Tauri 桌面端内置 Node、cloudflared、服务和生产依赖，安装后无需安装 Docker 或 Node，也无需首次下载运行组件。管理页面从本机服务加载，服务就绪后才显示窗口。
 
-## 开发环境
+数据持久化到系统用户应用数据目录中的 `com.lieren2012.cf-tunnel-manager/data`，升级不覆盖用户账号和隧道配置。启动日志为同级 `service.log`。
 
-需要 Rust、Node.js 和 Tauri CLI：
+## 开发与构建
 
 ```bash
 npm install
-npm run desktop:dev
+node scripts/prepare-desktop.mjs
+node scripts/download-desktop-runtime.mjs
+node scripts/test-desktop-runtime.mjs
+npx tauri build --config desktop/src-tauri/tauri.conf.json
 ```
 
-桌面端默认打开 `http://127.0.0.1:19090`。服务使用与 Docker 版相同的 `data/`
-目录结构，因此账号、隧道和凭据可以迁移，不会写入安装目录。
+Windows 安装包还必须通过 MSI 解包后的程序启动、注册、会话和重启账号保留测试。构建附件仅包含安装包；正式 Release 必须在测试通过后发布。
 
-## 体积目标
-
-安装包目标为 10–18 MB；首次启动按平台下载并缓存 Node 服务运行时和
-`cloudflared`，之后可离线启动。下载失败时桌面端保留错误信息，不会覆盖已有运行时。
+体积以生成的安装包为准，不再使用空桌面壳的体积作为完整客户端的估算。Linux 首先提供 deb；macOS 当前构建 Apple Silicon 版本。

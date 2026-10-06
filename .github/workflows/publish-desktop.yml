@@ -1,0 +1,49 @@
+name: Publish tested desktop installers
+on:
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: Successful desktop build run ID
+        required: true
+permissions:
+  actions: read
+  contents: write
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify test result and version
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BUILD_RUN: ${{ inputs.run_id }}
+          REPO: ${{ github.repository }}
+        run: |
+          gh api "repos/$REPO/actions/runs/$BUILD_RUN" > run.json
+          test "$(jq -r .conclusion run.json)" = success
+          test "$(jq -r .name run.json)" = 'Build desktop releases'
+          sha=$(jq -r .head_sha run.json)
+          echo "TESTED_SHA=$sha" >> "$GITHUB_ENV"
+          gh api "repos/$REPO/contents/package.json?ref=$sha" --jq .content | base64 -d > package.json
+          version=$(jq -r .version package.json)
+          echo "RELEASE_VERSION=v$version" >> "$GITHUB_ENV"
+      - uses: actions/download-artifact@v4
+        with:
+          run-id: ${{ inputs.run_id }}
+          github-token: ${{ github.token }}
+          pattern: desktop-*
+          path: installers
+      - name: Publish verified installers
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          cat > notes.md <<'NOTES'
+          内置 Node、cloudflared 和本地服务，无需 Docker 或另装 Node。
+          修复静态页面无法访问本地 API、首次注册失败和 Windows 服务启动路径问题。
+          启动本地服务后才显示窗口；账号数据保存在用户应用数据目录，升级保留。
+          三平台运行资源通过注册、会话、重启与登录测试；Windows MSI 解包程序通过实际启动测试。
+          未使用真实 Cloudflare 账户执行公网隧道连接测试。
+          macOS 安装包适用于 Apple Silicon；Linux 提供 deb。
+          NOTES
+          gh release create "$RELEASE_VERSION" --repo "$REPO" --target "$TESTED_SHA" --title "CF Tunnel Manager $RELEASE_VERSION" --notes-file notes.md
+          find installers -type f \( -name '*.exe' -o -name '*.msi' -o -name '*.dmg' -o -name '*.deb' \) -print0 | xargs -0 -r -n1 gh release upload "$RELEASE_VERSION" --repo "$REPO"
