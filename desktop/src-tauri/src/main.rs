@@ -6,6 +6,9 @@ fn free_port() -> std::io::Result<u16> { Ok(TcpListener::bind("127.0.0.1:0")?.lo
 fn main() {
  tauri::Builder::default().manage(LocalService(Mutex::new(None))).setup(|app| {
   let root=app.path().resource_dir()?.join("runtime");
+  // Node 的 Windows 模块解析不接受 Tauri 返回的扩展路径前缀。
+  #[cfg(windows)]
+  let root=std::path::PathBuf::from(root.to_string_lossy().trim_start_matches(r"\\?\"));
   let data=std::env::var_os("CFM_DESKTOP_DATA").map(std::path::PathBuf::from).unwrap_or(app.path().app_data_dir()?);
   std::fs::create_dir_all(data.join("data"))?;
   let port=free_port()?; let api=free_port()?; let mcp=free_port()?;
