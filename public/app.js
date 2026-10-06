@@ -844,10 +844,9 @@ async function boot() {
     showApp();
     boot();
   } catch (_) {
-    // 桌面端首次启动时本地服务可能仍在启动；没有可读取的会话状态时，
-    // 默认展示初始化注册界面，避免把全新安装误显示成登录页。
+    // 无法获取状态不能推断是否有账号，显示明确的连接错误。
     showLoginView('login');
-    const err = $('#authErr');
+    const err = $('#authErr2');
     if (err) err.textContent = '无法连接本地服务，请重启应用并检查 service.log';
   }
 })();

@@ -15,7 +15,7 @@ FROM ${NODE_IMAGE}
 ARG NPM_REGISTRY=https://registry.npmmirror.com
 
 LABEL org.opencontainers.image.title="CF Tunnel Manager" \
-      org.opencontainers.image.version="1.8.0" \
+      org.opencontainers.image.version="1.8.1" \
       org.opencontainers.image.description="Cloudflare Tunnel 多隧道管理面板 - 单容器多隧道并行"
 
 # git：用于「关于」页的面板内一键更新（检查新版本 / 拉取新代码）
