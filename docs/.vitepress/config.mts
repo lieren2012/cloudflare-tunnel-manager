@@ -20,7 +20,7 @@ const BASE = normalizeBase(process.env.DOCS_BASE)
 
 export default defineConfig({
   title: 'CF Tunnel Manager',
-  description: 'Cloudflare Tunnel 多隧道管理面板 —— 单容器多隧道同时在线，Docker 一键部署',
+  description: 'Docker 与 Windows、macOS、Linux 桌面端：安装教程、免费限制和实际验证记录',
 
   // 部署到 GitHub Pages 项目页时传 DOCS_BASE=cloudflare-tunnel-manager（或带斜杠的写法）
   base: BASE,
@@ -28,7 +28,7 @@ export default defineConfig({
   lang: 'zh-CN',
   cleanUrls: true,
   lastUpdated: true,
-  ignoreDeadLinks: true,
+  ignoreDeadLinks: false,
 
   head: [
     ['link', { rel: 'icon', type: 'image/svg+xml', href: `${BASE}logo.svg` }],
@@ -55,6 +55,8 @@ export default defineConfig({
         text: '开始使用',
         items: [
           { text: '快速开始', link: '/guide/' },
+          { text: 'Docker 安装', link: '/guide/docker' },
+          { text: '桌面端安装与下载', link: '/guide/desktop' },
           { text: '获取 Cloudflare 凭据', link: '/get-credentials' },
         ],
       },
@@ -70,6 +72,8 @@ export default defineConfig({
         text: '更多',
         items: [
           { text: '安全与公网暴露', link: '/guide/security' },
+          { text: 'Cloudflare 免费版限制', link: '/guide/limits' },
+          { text: '实际验证记录', link: '/guide/verification' },
           { text: '常见问题', link: '/guide/faq' },
         ],
       },

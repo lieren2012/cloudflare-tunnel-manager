@@ -1,70 +1,54 @@
 ---
 layout: home
-
 hero:
   name: CF Tunnel Manager
-  text: Cloudflare Tunnel 多隧道管理面板
-  tagline: 单容器内多条隧道同时在线 · Docker 一键部署 · 内置国内网络加速
+  text: Docker 与桌面端的隧道管理面板
+  tagline: v1.8.1 · Windows x64 / macOS Apple Silicon / Linux amd64 · 内置本地运行资源
   image:
     src: /logo.svg
     alt: CF Tunnel Manager
   actions:
     - theme: brand
-      text: 快速开始
+      text: 选择版本与快速开始
       link: /guide/
     - theme: alt
-      text: 获取 Cloudflare 凭据
-      link: /get-credentials
+      text: 下载桌面端
+      link: /guide/desktop
     - theme: alt
-      text: GitHub
-      link: https://github.com/lieren2012/cloudflare-tunnel-manager
-
+      text: 免费版限制与实际验证
+      link: /guide/limits
 features:
-  - icon: 🚇
-    title: 多隧道并行
-    details: 每条隧道独立进程，可同时在线、独立启停，异常退出按指数退避自动重连（1s → 60s）。原版同时只能连 1 条。
-  - icon: 🎲
-    title: 一键随机域名
-    details: 设定默认域名后，点一下就能生成随机二级域名，并自动在 Cloudflare 创建 DNS CNAME，橙云代理自带 HTTPS。
-  - icon: 👥
-    title: 多用户与数据隔离
-    details: 首个注册者自动成为管理员，后续注册需管理员审核；普通用户只看得到自己的隧道，管理员可加备注。
-  - icon: 🔄
-    title: 面板内一键更新
-    details: 关于页检测更新 → 你手动确认 → 自动拉取代码并重启，登录状态保留。更新源失败会自动切换国内镜像。
-  - icon: ⚡
-    title: 国内网络加速
-    details: 拉代码、拉基础镜像、装 npm 依赖三个环节默认走国内可用源，不用改 daemon.json、不用配代理。
-  - icon: 🔌
-    title: 外部 API 与 MCP
-    details: 自带 RESTful API（19092）与 MCP 服务（19093），可让 AI 客户端直接查询和操控你的隧道。
+  - title: Docker 版
+    details: 适合 Linux 服务器和 NAS 持续运行。通过浏览器管理，数据保存在宿主机挂载目录。
+  - title: 桌面版
+    details: 内置 Node、cloudflared 和生产依赖，无需 Docker。程序启动本地服务后打开管理界面。
+  - title: 多隧道管理
+    details: 创建隧道、配置域名路由、独立连接与断开，支持多条隧道同时在线。
+  - title: 数据留在本机
+    details: 用户、凭据和隧道配置持久化到本机。不同设备的数据不会自动同步，升级前请备份。
+  - title: 清楚的更新方式
+    details: Docker 使用原安装目录升级；桌面端下载新版安装包覆盖安装，不使用 Git 面板更新。
+  - title: 来源与测试证据
+    details: 公开 Cloudflare 官方限制、安装包架构和 CI 验证范围，不把编译成功等同于公网隧道已验证。
 ---
 
-## 它解决什么问题
+## 当前发行版本
 
-原版「飞牛 Cloudflare Tunnel」面板同时只能保持 **1 条**隧道在线，想跑多个内网服务就得反复切换。本项目重构为**单容器多隧道架构**——每条隧道是独立子进程，互不影响，可以同时挂载多个内网服务。
+**v1.8.1**，资料核对日期：**2026-10-07**。[Release 与下载](https://github.com/lieren2012/cloudflare-tunnel-manager/releases/tag/v1.8.1)。
 
-## 三分钟跑起来
+| 版本 | 使用场景 | 入口 |
+| --- | --- | --- |
+| Docker | Linux 服务器、NAS，适合长期在线 | [Docker 安装教程](/guide/docker) |
+| Windows 桌面 | Windows x64，本机运行服务 | [桌面端安装教程](/guide/desktop) |
+| macOS 桌面 | Apple Silicon（M 系列芯片） | [架构与下载](/guide/desktop#下载与适用系统) |
+| Linux 桌面 | amd64 的 Debian/Ubuntu 系发行版，deb 包 | [安装与依赖](/guide/desktop#linux) |
 
-```bash
-# 1. 下载（国内直连不稳就用第二行）
-git clone https://github.com/lieren2012/cloudflare-tunnel-manager.git
-# git clone https://v4.gh-proxy.org/https://github.com/lieren2012/cloudflare-tunnel-manager.git
+当前 Release **没有** macOS Intel、Windows ARM64、Linux ARM 桌面安装包，也没有 v1.8.1 AppImage。ARM NAS 请查看 Docker 教程的架构说明。
 
-# 2. 构建并启动
-cd cloudflare-tunnel-manager
-docker compose up -d --build
-```
+## 先确认你的服务在哪台设备
 
-然后浏览器打开 `http://你的NAS地址:19090`，按引导注册管理员账户。
+Tunnel 将访问转发到运行 `cloudflared` 的设备可达的服务。桌面端填写 `http://127.0.0.1:8080`，指的是**这台电脑**的 8080 端口；Docker 默认 host 网络下指的是**服务器宿主机**。
 
-接下来的路：**[获取 Cloudflare 凭据](/get-credentials)** → **[填进面板并接入第一条隧道](/guide/)**
+本项目负责连接和转发，**不会自动安装或启动你要转发的网站、数据库、NAS 应用或其他业务服务**。请先在本机/局域网打开业务地址，确认服务可用。
 
-## 系统要求
-
-| 项目 | 要求 |
-|---|---|
-| 系统 | Linux / NAS（飞牛、群晖等），支持 Docker |
-| Docker | 支持 `docker compose` 或 `docker-compose` |
-| 网络 | 能访问 Cloudflare 边缘（国内正常网络即可） |
-| 前置 | 一个已托管到 Cloudflare 的域名（免费套餐就行） |
+开始使用：[选择版本](/guide/) → [获取凭据](/get-credentials) → [创建第一条隧道](/guide/#创建第一条隧道)。

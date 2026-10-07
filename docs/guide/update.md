@@ -1,146 +1,71 @@
-# 更新与国内加速
+# 更新、备份与国内下载源
 
-## 面板内一键更新（推荐）
+最新正式发行版见 [Releases](https://github.com/lieren2012/cloudflare-tunnel-manager/releases)。当前为 **v1.8.1**。`main` 可能包含尚未发布的源码改动，不保证与已测试安装包完全一致。
 
-管理员登录 → 左侧「**ℹ️ 关于**」→「**版本更新**」：
+## 桌面端更新
 
-1. 点「**🔍 检测更新**」——面板连接更新源，比对版本，列出**落后的提交**和最新版本号
-2. 有新版时出现「**⬆️ 更新到最新版**」，点一下并确认
-3. 面板**自动重启**加载新版本，页面自动刷新，**登录状态保留**
+关闭应用，备份用户应用目录里的 data，再下载对应架构的新版包覆盖安装。当前不支持桌面自动更新，不使用关于页的 Git 源码更新。安装包里的 Node/cloudflared 会随新包更新。详见 [桌面教程](/guide/desktop)。
 
-侧边栏「关于」出现红点、首页出现提示条，就表示检测到了新版本。
+## Docker 命令升级
 
-::: info 更新为什么不会丢数据
-项目源码以卷的方式挂载进容器（compose 里的 `./:/app`），更新 = `git fetch` + `git reset --hard` 到最新提交，然后容器重启加载新代码。你的 `./data/` 目录不在 git 里，凭据、用户、隧道配置完全不受影响。
-:::
-
-::: warning 第一次必须先手动更新一次
-旧版本容器里没有源码挂载、也没有新镜像，**面板内更新按钮在第一次是用不了的**。请先用下面的命令行方式更新到最新版，之后就能一直在面板里点了。
-:::
-
-## 命令行更新
-
-### 用脚本（推荐）
-
-在项目目录执行：
+**进入原来的 Git 项目目录**，不要重新克隆到新目录。先备份 data、`.env` 和 Compose override。
 
 ```bash
-bash update.sh
-```
-
-脚本会：**先直连 GitHub，失败自动依次切换内置镜像**（`v4.gh-proxy.org` → `gh-proxy.com` → `ghfast.top`），全部以 HTTP/1.1 发起，最后自动重建容器。
-
-### 直接敲命令
-
-```bash
-cd cloudflare-tunnel-manager && \
-git -c http.version=HTTP/1.1 fetch origin && \
-git reset --hard origin/main && \
-docker compose up -d --build && \
-docker image prune -f
-```
-
-**如果直连报错**（`HTTP/2 stream 1 was not closed cleanly` 或 `Failed to connect to github.com`），换成走镜像：
-
-```bash
-cd cloudflare-tunnel-manager && \
-git -c http.version=HTTP/1.1 fetch https://v4.gh-proxy.org/https://github.com/lieren2012/cloudflare-tunnel-manager.git main && \
-git reset --hard FETCH_HEAD && \
-(docker compose up -d --build 2>/dev/null || docker-compose up -d --build)
-```
-
-### 只检查不更新
-
-```bash
-cd cloudflare-tunnel-manager && git -c http.version=HTTP/1.1 fetch origin -q && git log --oneline HEAD..origin/main
-```
-
-- **有输出** = 有新版本（列出的就是待更新的提交）
-- **无输出** = 已是最新
-
-## 国内网络加速（已内置，通常无需配置）
-
-三个环节都默认走国内可用源，**不用改 `daemon.json`、不用配代理**：
-
-| 环节 | 默认 | 失败兜底 |
-|---|---|---|
-| 拉取/更新代码 | 直连 GitHub | 自动依次切 `v4.gh-proxy.org` → `gh-proxy.com` → `ghfast.top`，成功的会**记住**下次优先用 |
-| 拉取基础镜像 | `docker.1ms.run` | `bash update.sh` 构建失败时自动改用官方源重试 |
-| 安装 npm 依赖 | `registry.npmmirror.com` | — |
-
-### 更新源是怎么选的
-
-点「检测更新」时按这个顺序自动尝试，**一个失败立刻换下一个**：
-
-1. **直连 GitHub**（只给 25 秒快速失败，不会干等）
-2. **上次成功的镜像**（记住的）
-3. **v4.gh-proxy.org** → **gh-proxy.com** → **ghfast.top**
-
-检测结果会显示「本次检测经 xxx 完成」，让你知道走的哪个源。全部失败时，错误信息会**列出每个源的具体失败原因**。
-
-### 手动指定更新源
-
-一般不用管。如果公司/学校网络有特殊要求，可以在「关于 → 更新源设置」里：
-
-- **更新源下拉**：选「自动」或固定用某个内置镜像
-- **自定义加速前缀**：自己有镜像就填这里（**填了就优先于下拉**）
-- **Git 代理**：例如 `http://192.168.1.2:7890`
-
-### 换 Docker 基础镜像源
-
-项目在 Dockerfile 里把基础镜像参数化了，所以不用改 Docker 全局配置。需要换源时，在项目目录建 `.env`：
-
-```bash
-cp .env.example .env
-```
-
-```ini
-# 换回官方源
-NODE_IMAGE=node:22-alpine
-CLOUDFLARED_IMAGE=cloudflare/cloudflared:latest
-# 或者换其他加速站
-# NODE_IMAGE=docker.m.daocloud.io/library/node:22-alpine
-```
-
-也可以只在某次构建临时覆盖：
-
-```bash
-NODE_IMAGE=node:22-alpine CLOUDFLARED_IMAGE=cloudflare/cloudflared:latest docker compose up -d --build
-```
-
-::: tip 为什么不用改 daemon.json
-Docker 全局镜像加速要写 `/etc/docker/daemon.json` 并重启 Docker 服务——在 NAS 上这会把其他容器一起停掉。本项目改成在镜像名里直接写加速地址，零系统改动、开箱即用。
-:::
-
-## 更新出问题怎么回退
-
-更新日志（`data/update.log`）里记录了**更新前的提交号**。如果新版启动异常：
-
-```bash
-cd cloudflare-tunnel-manager
-git reset --hard <更新前的提交号>
+# 在原项目目录执行，更新到已发布的 v1.8.1
+cp -a data "data.backup.$(date +%Y%m%d-%H%M%S)"
+git remote set-url origin https://github.com/lieren2012/cloudflare-tunnel-manager.git
+git -c http.version=HTTP/1.1 fetch origin tag v1.8.1
+git reset --hard v1.8.1
 docker compose up -d --build
+curl -fsS http://127.0.0.1:19090/api/auth/state
 ```
 
-## 常见更新报错
+`reset --hard` 会覆盖已跟踪源码改动，data/.env 通常被 Git 忽略；**请仍先备份**。有自定义配置时优先放在 `.env` 和 Compose override 中。
 
-::: details `HTTP/2 stream 1 was not closed cleanly`
-国内直连 GitHub 的经典故障，与你的配置无关。用镜像命令更新即可（见上面「直接敲命令」的第二段）。
-:::
+也可在旧项目目录执行 `bash install.sh`：复用当前目录、备份 data、拉取 main 并重建。`bash update.sh` 为源码升级脚本，同样跟踪 main；它与固定 Release 升级不同，也不能代替桌面安装器。
 
-::: details `dubious ownership in repository`
-面板内更新是以容器用户（root）写的 git 数据，宿主机上再操作 git 可能报这个。执行一次：
+对停服务一致性有要求的备份，请按 [Docker 备份教程](/guide/docker#数据与备份) 操作。
+
+## Docker 面板内更新
+
+需要实际 Git 工作区、可运行的 git、Compose 中源码挂载 `./:/app`，以及重启策略 `unless-stopped`。管理员在“关于”页检测更新、确认更新。它会拉取跟踪分支源码并重启进程，**不负责重新安装 Docker 基础镜像或补充新依赖**；依赖变化时仍需命令行重建。
+
+不满足这些前提时，不要反复点击更新按钮，改用命令升级。更新完成核对版本、容器状态、原账号与隧道；页面缓存可用 Ctrl+F5 刷新。
+
+## 不同下载源不要混用
+
+| 下载内容 | 地址示例 | 使用位置 |
+| --- | --- | --- |
+| Git 源码 | github.com；v4.gh-proxy.org 等 GitHub 反代 | Git 更新源 |
+| Docker 镜像 | docker.1ms.run；Docker Hub | Compose build args |
+| npm 依赖 | registry.npmmirror.com | NPM_REGISTRY |
+
+`docker.1ms.run` **不是 Git 更新源**。第三方加速源不保证一直可用，不能承诺国内固定速度。安装脚本的代码源测速也不代表镜像、npm 或 Tunnel 本身已测速。
+
+基础镜像不可用时可临时使用官方源：
 
 ```bash
-git config --global --add safe.directory /www/wwwroot/cf.tunnel/cloudflare-tunnel-manager
+NODE_IMAGE=node:22-alpine CLOUDFLARED_IMAGE=cloudflare/cloudflared:latest \
+  docker compose up -d --build
 ```
-:::
 
-::: details 更新完了但页面没变化
-先 **Ctrl + F5** 强刷浏览器（前端资源有缓存）。如果版本号还是旧的，确认容器真的重建了：
+## 修复更新地址重复拼接
+
+如果错误里出现 `加速站/https://另一个加速站/https://github.com/...`，先在实际项目目录执行：
 
 ```bash
-docker compose ps
-docker compose logs --tail=20
+git remote set-url origin https://github.com/lieren2012/cloudflare-tunnel-manager.git
+git remote get-url origin
 ```
-:::
+
+输出应是原始 GitHub 地址。再在面板清空“自定义加速前缀”，选择“自动”，保存并检测。若手动填写前缀，只填 `https://v4.gh-proxy.org/`，不要填完整仓库 URL。
+
+`fatal: not a git repository` 表示目录不对。通过 Docker inspect 查看挂载，再进入包含 `.git` 的目录：
+
+```bash
+docker inspect cf-tunnel-manager --format '{{range .Mounts}}{{println .Source "->" .Destination}}{{end}}'
+```
+
+## 更新后要求重新注册
+
+先不要创建新账号。通常需要排查新实例是否用了空 data、目录是否套了一层、端口是否指向另一个实例。确认旧挂载和备份后恢复，**不要删除当前 data 再凭猜测复制**。目录里的 `users.json` 是面板用户数据，旧教程中寻找 `auth.json` 不适用于这个项目。

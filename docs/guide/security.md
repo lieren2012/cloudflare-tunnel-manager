@@ -4,6 +4,8 @@
 
 ## 默认状态与风险
 
+下表以 Docker 默认部署为准。桌面 v1.8.1 只监听本机 `127.0.0.1`，端口动态选择。详见 [桌面数据与端口](/guide/desktop#端口和数据目录)。
+
 | 项目 | 默认 | 风险 |
 |---|---|---|
 | 面板登录 | **首次启动引导注册管理员**，之后需登录 | 未设 `ADMIN_PASSWORD` 时紧急通道关闭，属正常 |
@@ -42,7 +44,7 @@
 | 层次 | 内容 | 特点 |
 |---|---|---|
 | `GET /robots.txt` | `User-agent: *` + `Disallow: /` | 全站禁止抓取，守规矩的爬虫会直接离开 |
-| `X-Robots-Tag` 响应头 | `noindex, nofollow, noarchive, nosnippet, noimageindex, notranslate` | **比 robots.txt 硬**：即使爬虫不守规矩抓了页面，也不会建索引、不留快照 |
+| `X-Robots-Tag` 响应头 | `noindex, nofollow, noarchive, nosnippet, noimageindex, notranslate` | 向爬虫声明不要索引或留快照；不能强制不守规则的爬虫遵守 |
 | 页面 `<meta name="robots">` | 同样的 noindex 声明，另附 `referrer: no-referrer` | 从本页面点外链时不泄露来源地址 |
 
 关掉这个开关后，`robots.txt` 会降级为只禁 `/api/`，响应头也不再发送。
@@ -55,10 +57,12 @@
 
 ## 凭据是怎么存的
 
+桌面版数据在用户应用目录的 `data/`，Docker 默认在宿主机项目 `data/`。Cloudflare Token 当前保存在 `config.json`，不是系统密钥链加密存储；备份含敏感凭据，请限制访问并加密保存。调用 Cloudflare API 时会发送相应凭据和配置，业务流量经 Tunnel 经过 Cloudflare，不能宣传为所有数据永远不离开本机。
+
 - Cloudflare API Token 只保存在**你自己的 `/data` 目录**（`config.json`）
 - 用户密码用 **scrypt 加盐哈希**存储，不存明文
 - 会话 Cookie 设了 `HttpOnly` + `SameSite=Strict`，有效期 7 天
-- 项目本身**不含任何上报/统计逻辑**，不会把你的凭据或隧道信息发到任何第三方
+- 项目不设置独立的遥测上报服务；管理 Cloudflare 隧道/DNS 的 API 请求仍会将相应凭据和配置发送给 Cloudflare，Git/npm/镜像下载也会访问配置的外部下载源。
 
 ## 如果凭据泄露了
 

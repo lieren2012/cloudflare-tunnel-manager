@@ -1,124 +1,49 @@
-# 快速开始
+# 选择版本与快速开始
 
-从零到一条隧道跑通，大约 3 分钟。需要你手上有 **一个托管在 Cloudflare 的域名**（免费套餐足够）。
+当前正式发行版 **v1.8.1**。安装包、源码及测试范围以 [Release](https://github.com/lieren2012/cloudflare-tunnel-manager/releases/tag/v1.8.1) 和 [实际验证记录](/guide/verification) 为准。
 
-## 第一步：部署
+## 选哪个版本
 
-SSH 到你的 NAS 或服务器：
+| 条件 | 建议 |
+| --- | --- |
+| NAS / Linux 服务器需要长期在线 | Docker 版 |
+| Windows x64 本地电脑 | Windows EXE；也提供 MSI |
+| macOS M 系列芯片 | Apple Silicon DMG |
+| Debian/Ubuntu amd64 桌面 | Linux DEB |
+| Intel Mac / ARM Linux 桌面 | 当前无对应桌面包；不要下载不匹配的架构 |
 
-```bash
-# 1. 下载项目（国内直连 GitHub 不稳时，用第二行的镜像地址）
-git clone https://github.com/lieren2012/cloudflare-tunnel-manager.git
-# git clone https://v4.gh-proxy.org/https://github.com/lieren2012/cloudflare-tunnel-manager.git
+Docker 与桌面版共用管理功能，但运行环境、端口、数据目录、升级方式不同。电脑休眠、断网或服务停止会影响隧道访问；需要持续在线优先用服务器或 NAS。
 
-# 2. 构建并启动
-cd cloudflare-tunnel-manager
-docker compose up -d --build
-```
+## 安装
 
-构建会自动从 `docker.1ms.run` 拉取基础镜像、从 `registry.npmmirror.com` 装 npm 依赖，国内一般 1~3 分钟。
+- [Docker 安装与卸载](/guide/docker)：需要 Docker、Compose、Git，默认端口 19090。
+- [桌面端安装与升级](/guide/desktop)：内置 Node 与 cloudflared，本地端口自动分配。
 
-::: tip 首次构建较慢是正常的
-主要耗时在拉取 `node:22-alpine` 和 `cloudflare/cloudflared` 两个基础镜像（合计约 100MB）。第二次重建会用缓存，几秒就好。
-:::
+## 首次注册与已有账号
 
-## 第二步：打开面板
+新数据目录首次打开显示“创建管理员账户”，第一个账户成为管理员。已有数据则显示登录。后续注册用户需管理员审核。
 
-```text
-http://你的NAS地址:19090
-```
+面板账户是本次安装自己的账号，**不是 Cloudflare 账号**。Docker 服务器和本地桌面端各有数据目录，账号不会自动同步。升级后突然要求注册，先检查目录/挂载，不要直接创建新管理员覆盖排查线索。
 
-首次打开会引导你**注册管理员账户**——第一个注册的用户自动成为管理员。
+## 配置 Cloudflare
 
-::: warning 记住这个密码
-管理员密码用于管理用户与凭据。忘了可以在 NAS 上给容器设 `ADMIN_PASSWORD` 环境变量走紧急恢复通道，或用 `master` 作为用户名登录。
-:::
+需要可用于发布域名的 Cloudflare 账户、域名、Account ID 和 API Token。[按凭据教程创建令牌](/get-credentials)，在“系统配置”里测试通过后保存。域名购买费用与 Tunnel 是否免费是两回事。
 
-## 第三步：填入 Cloudflare 凭据
+## 创建第一条隧道
 
-进入「**⚙️ 系统配置**」页面，需要填两样东西：
+1. 先确认业务服务已启动，可以直接访问，如 `http://127.0.0.1:8080` 或 `http://192.168.1.10:5000`。
+2. 打开“Tunnel 列表”，新建隧道，例如 `nas`。
+3. 点击“连接”，查看日志是否出现 `Registered tunnel connection`。
+4. 添加路由：`nas.example.com` → 业务服务地址。面板会创建对应 DNS CNAME。
+5. 从外部网络访问 `https://nas.example.com`，验证页面、登录和实际请求均可用。只有进程在运行不足以证明转发成功。
 
-| 字段 | 从哪来 |
-|---|---|
-| 账号 ID（Account ID） | Cloudflare 后台右侧栏复制 |
-| API Token | 自建一个自定义令牌，只给两条权限 |
+“自启”表示面板服务启动后自动连接已配置隧道，**不代表桌面程序已实现随操作系统开机启动**。
 
-具体步骤见 **[获取 Cloudflare 凭据](/get-credentials)**（3 步，1 分钟）。
+## 常用教程
 
-填完点「**测试配置**」，显示通过后点「**保存配置**」。
-
-## 第四步：建第一条隧道
-
-1. 进入「**Tunnel 列表**」→ 点「**新建 Tunnel**」，输入一个名字（例如 `nas`）
-2. 点这条隧道的「**连接**」——日志出现 `Registered tunnel connection connIndex=0` 就说明通了
-3. 点「**路由**」→ 添加规则：
-
-   | 字段 | 示例 |
-   |---|---|
-   | 域名 | `nas.example.com` |
-   | 服务 | `http://192.168.1.10:5000` |
-
-   保存后会自动在 Cloudflare 创建 DNS CNAME 记录，浏览器打开 `https://nas.example.com` 就能访问你的内网服务了。
-
-4. 打开这条隧道的「**自启**」开关，容器重启后会自动重连（相当于开机自启）。
-
-::: tip 想要随机域名？
-先在「系统配置 → 默认域名」里填好你的主域名（如 `example.com`），之后在路由弹窗里点「🎲」就能一键生成随机二级域名，不用自己想名字。
-:::
-
-## 服务端口
-
-| 端口 | 服务 | 说明 |
-|---|---|---|
-| **19090** | Web 管理面板 | 你日常用的界面 |
-| **19092** | 外部 REST API | 给别的程序调用，`X-API-Key` 鉴权 |
-| **19093** | MCP 服务 | 给 AI 客户端接入，`X-API-Key` 鉴权 |
-
-详见 **[外部 API 与 MCP](/guide/api)**。
-
-## 目录与数据
-
-```text
-cloudflare-tunnel-manager/
-├── src/            后端源码
-├── public/         前端源码
-├── data/           ★ 你的数据（不在 git 里，更新不受影响）
-│   ├── config.json    Cloudflare 凭据、站点设置、更新源
-│   ├── tunnels.json   隧道与分组
-│   ├── users.json     用户账户
-│   └── sessions.json  登录会话
-├── docker-compose.yml
-└── update.sh       命令行更新脚本
-```
-
-::: danger 一定要备份 data/ 目录
-所有凭据、用户、隧道配置都在这里。`git reset --hard` 之类的代码更新不会碰它，但你自己手动删目录前请先备份。
-:::
-
-## 网络模式说明
-
-默认使用 `network_mode: host`——这样隧道进程能直接访问宿主机内网（例如 `192.168.x.x` 上的服务），无需额外配置。
-
-如果你必须用 bridge 网络，把 compose 里的 `network_mode: host` 换成端口映射，并把隧道服务地址改成**宿主机 IP**：
-
-```yaml
-ports:
-  - "19090:19090"
-  - "19092:19092"
-  - "19093:19093"
-```
-
-## 不用 Docker 的话
-
-需要 Node.js 18+ 和本机已安装 `cloudflared`（或用 `CLOUDFLARED_PATH` 指定路径）：
-
-```bash
-npm install
-npm start
-```
-
-## 下一步
-
-- **[管理面板](/guide/panel)** —— 隧道管理、设备分组、多用户、站点设置
-- **[更新与国内加速](/guide/update)** —— 面板内一键更新怎么用
-- **[安全与公网暴露](/guide/security)** —— 准备把面板放到公网前务必看
+- [管理面板](/guide/panel)
+- [Docker/桌面不同的更新方式](/guide/update)
+- [外部 API 与 MCP：端口区别](/guide/api)
+- [免费版限制与用途](/guide/limits)
+- [安全、备份与公网访问](/guide/security)
+- [排错](/guide/faq)
