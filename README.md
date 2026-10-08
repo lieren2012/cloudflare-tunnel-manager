@@ -1,6 +1,6 @@
 # CF Tunnel Manager
 
-当前版本：**v1.8.3**。提供 `install.sh` 一键安装/升级与 `uninstall.sh` 卸载脚本。
+当前版本：**v1.8.4**。提供 `install.sh` 一键安装/升级与 `uninstall.sh` 卸载脚本。
 
 发布新版本时运行 `npm run version:set -- 1.8.0`，会同步更新 Docker、Tauri 和文档中的版本号。
 

@@ -78,8 +78,15 @@
 
     <!-- 系统配置 -->
     <section id="page-config" class="page">
-      <h1>系统配置</h1>
-      <div class="card form-card">
+      <div class="config-toolbar"><button class="config-menu" type="button" aria-label="菜单">☰</button><div class="config-search">⌕　搜索功能、节点或配置… <kbd>Ctrl K</kbd></div><div class="config-toolbar-actions">☼　♧　<span class="config-avatar">A</span><b>管理员</b>⌄</div></div>
+      <div class="config-heading"><div><h1>系统配置</h1><p>管理站点信息、Cloudflare 账户及连接参数等系统配置</p></div><span>首页　/　系统配置</span></div>
+      <div class="config-stats">
+        <div class="config-stat"><span class="stat-icon purple">▤</span><div><small>Tunnel 数量</small><strong id="cfgTunnelCount">-</strong><em>已创建的隧道数量</em></div></div>
+        <div class="config-stat"><span class="stat-icon green">⌁</span><div><small>在线节点</small><strong id="cfgOnlineCount">-</strong><em>所有节点运行状态</em></div></div>
+        <div class="config-stat"><span class="stat-icon orange">☁</span><div><small>API 连接状态</small><strong id="cfgApiStatus">待检测</strong><em>Cloudflare API 连接状态</em></div></div>
+        <div class="config-stat"><span class="stat-icon blue">◷</span><div><small>最后同步时间</small><strong id="cfgSyncTime">-</strong><em>配置同步状态</em></div></div>
+      </div>
+      <div class="card form-card config-card">
         <h3>🏷️ 站点设置</h3>
         <label>站点名称（浏览器标签页 / 侧边栏 / 登录页显示）
           <input id="cfgSiteName" maxlength="32" placeholder="留空 = Cloudflare Tunnel 管理面板">
@@ -91,7 +98,7 @@
         </div>
         <p id="siteMsg" class="msg"></p>
       </div>
-      <div class="card form-card">
+      <div class="card form-card config-card">
         <h3>☁️ Cloudflare 账号</h3>
         <details class="cfg-guide">
           <summary>📖 怎么拿 Account ID 和 API Token？（3 步，1 分钟）</summary>
@@ -139,6 +146,8 @@
         </div>
         <p id="cfgMsg" class="msg"></p>
       </div>
+      <aside class="config-side-card config-security-card"><h3>让你的服务更安全、更高效</h3><p>通过 Cloudflare Tunnel，安全地将本地服务暴露到公网，无需公网 IP。</p><div><b>◆　安全连接</b><small>无需暴露服务器 IP，默认加密传输</small></div><div><b>ϟ　简单高效</b><small>快速创建隧道，轻松管理多个服务</small></div><div><b>▥　稳定可靠</b><small>基于 Cloudflare 全球网络，保障服务可用性</small></div></aside>
+      <aside class="config-side-card config-status-card"><h3>连接状态 <span>● 已连接</span></h3><div><span>☁　Cloudflare 连接状态</span><b>正常</b></div><div><span>↗　Tunnel 权限</span><b>已授权</b></div><div><span>◎　DNS 权限</span><b>已授权</b></div><div><span>◷　最后验证时间</span><small id="cfgVerifyTime">-</small></div><button class="secondary" onclick="testConfig()">⌬　重新验证连接</button></aside>
     </section>
 
     <!-- Tunnel 列表 -->

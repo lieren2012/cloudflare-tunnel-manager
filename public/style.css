@@ -284,6 +284,35 @@ button.mini { padding: 5px 10px; font-size: 12px; border-radius: 7px; }
 #page-config .msg.err { background: #fff1f2; }
 #page-config .chk { display: flex !important; align-items: flex-start; gap: 9px; max-width: 900px !important; margin-top: 20px !important; }
 #page-config .chk input { flex: 0 0 auto; width: 16px; margin-top: 3px; }
+.config-toolbar { display:flex; align-items:center; gap:16px; height:54px; margin:-12px -8px 18px; padding:0 4px; border-bottom:1px solid #edf1f7; color:#173267; }
+.config-menu { background:transparent; color:#173267; box-shadow:none; font-size:22px; padding:4px 8px; }
+.config-menu:hover { background:#eef4ff; box-shadow:none; transform:none; }
+.config-search { flex:1; max-width:430px; padding:10px 16px; border-radius:10px; background:#f5f8fd; color:#a0aec0; font-size:13px; }
+.config-search kbd { float:right; background:#fff; color:#94a3b8; border-radius:6px; padding:2px 7px; font-size:11px; }
+.config-toolbar-actions { margin-left:auto; display:flex; align-items:center; gap:12px; color:#475569; }
+.config-avatar { display:inline-flex; align-items:center; justify-content:center; width:34px; height:34px; border-radius:50%; color:#fff; background:linear-gradient(135deg,#7187c8,#3856a8); }
+.config-heading { display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:20px; color:#71809b; }
+.config-heading h1 { margin:0 0 4px !important; padding:0 !important; font-size:27px !important; color:#172554; }
+.config-heading h1::after { display:none; }
+.config-heading p { margin:0; font-size:13px; }
+.config-heading > span { font-size:13px; }
+.config-stats { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; grid-column:1/-1; margin-bottom:2px; }
+.config-stat { display:flex; align-items:center; gap:13px; min-height:94px; padding:17px 18px; border:1px solid #e7edf7; border-radius:14px; background:#fff; box-shadow:0 8px 25px -20px rgba(32,64,120,.45); }
+.config-stat > div { min-width:0; }
+.config-stat small,.config-stat em { display:block; color:#8290a8; font-size:12px; font-style:normal; }
+.config-stat strong { display:block; margin:3px 0; color:#1e2f52; font-size:22px; }
+.config-stat strong.good { color:#16a56a; }
+.stat-icon { display:flex; align-items:center; justify-content:center; width:42px; height:42px; border-radius:12px; font-size:21px; color:#fff; }
+.stat-icon.purple { background:linear-gradient(135deg,#9b8af5,#7762dd); }.stat-icon.green { background:linear-gradient(135deg,#35d88d,#15b978); }.stat-icon.orange { background:linear-gradient(135deg,#ffb14c,#f08a20); }.stat-icon.blue { background:linear-gradient(135deg,#5596f6,#3575e5); }
+#page-config { display:grid; grid-template-columns:minmax(0,2fr) minmax(280px,1fr); gap:18px; }
+#page-config > .config-toolbar, #page-config > .config-heading, #page-config > .config-stats { grid-column:1/-1; }
+#page-config > .config-card { grid-column:1; margin:0; }
+#page-config > .config-card + .config-card { grid-column:1; }
+.config-side-card { grid-column:2; border:1px solid #e7edf7; border-radius:15px; padding:24px; background:#fff; box-shadow:0 8px 25px -20px rgba(32,64,120,.45); align-self:start; }
+.config-security-card { grid-row:4; min-height:270px; background:linear-gradient(135deg,#f5f9ff,#eaf3ff); }
+.config-side-card h3 { margin:0 0 11px; color:#1c3561; font-size:19px; }.config-side-card p { color:#71809b; font-size:13px; line-height:1.65; margin-bottom:18px; }.config-security-card div { margin:17px 0; color:#284676; }.config-security-card small { display:block; color:#7c8ba5; margin:4px 0 0 27px; }
+.config-status-card { grid-row:5; }.config-status-card h3 { display:flex; justify-content:space-between; }.config-status-card h3 span { color:#13aa70; font-size:12px; font-weight:500; }.config-status-card div { display:flex; justify-content:space-between; padding:12px; color:#52647f; background:#f4fbf8; border-bottom:1px solid #e6f5ee; font-size:13px; }.config-status-card div b { color:#16a56a; }.config-status-card div small { color:#71809b; }.config-status-card button { margin-top:14px; }
+@media (max-width: 980px) { .config-stats { grid-template-columns:repeat(2,1fr); } #page-config { grid-template-columns:1fr; } #page-config > .config-card, .config-side-card { grid-column:1; grid-row:auto; } }
 
 button:disabled { opacity: .6; cursor: not-allowed; transform: none !important; box-shadow: none; }
 

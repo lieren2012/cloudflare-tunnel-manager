@@ -222,6 +222,15 @@ async function loadConfig() {
     $('#cfgSiteName').value = data.siteName || '';
     $('#cfgNoIndex').checked = data.noIndex !== false;
     await loadZones();
+    const [tunnels, system] = await Promise.all([api('/tunnels'), api('/system')]);
+    const list = tunnels.data.tunnels || [];
+    $('#cfgTunnelCount').textContent = list.length;
+    $('#cfgOnlineCount').textContent = `${list.filter(t => t.online).length} / ${list.length}`;
+    $('#cfgApiStatus').textContent = data.hasToken ? '正常' : '未配置';
+    $('#cfgApiStatus').className = data.hasToken ? 'good' : '';
+    const time = new Date().toLocaleString('zh-CN', { hour12: false, month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+    $('#cfgSyncTime').textContent = time;
+    $('#cfgVerifyTime').textContent = time;
   } catch (_) {}
 }
 function cfgMsg(text, ok) { const m = $('#cfgMsg'); m.textContent = text; m.className = 'msg ' + (ok ? 'ok' : 'err'); }
