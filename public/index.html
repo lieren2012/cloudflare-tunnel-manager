@@ -113,7 +113,9 @@
           </p>
         </details>
         <label>账号 ID（Account ID）<input id="cfgAccount" placeholder="Cloudflare Account ID"></label>
-        <label>API 令牌（API Token）<input id="cfgToken" type="password" placeholder="留空表示不修改已保存的令牌"></label>
+        <label>API 令牌（API Token）
+          <span class="secret-input"><input id="cfgToken" type="password" autocomplete="off" placeholder="留空表示不修改已保存的令牌"><button type="button" class="secret-toggle" id="cfgTokenToggle" onclick="toggleTokenVisibility()" aria-label="显示 API Token">显示</button></span>
+        </label>
         <p class="muted">令牌需授予 <b>Cloudflare Tunnel（读取+编辑）</b> 与 <b>DNS（读取+编辑）</b> 权限。</p>
         <h3>🔌 连接参数</h3>
         <label>连接协议

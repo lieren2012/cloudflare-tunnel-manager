@@ -1,14 +1,14 @@
-# v1.8.1 实际验证记录
+# v1.8.2 实际验证记录
 
-核对日期：**2026-10-07**。版本：**v1.8.1**，发行代码提交：`6241e35`。本页区分测试结果和未验证范围。
+核对日期：**2026-10-07**。版本：**v1.8.2**，发行代码提交：`6241e35`。本页区分测试结果和未验证范围。
 
 ## 可复核的证据
 
-- [v1.8.1 Release 与四个安装包](https://github.com/lieren2012/cloudflare-tunnel-manager/releases/tag/v1.8.1)
+- [v1.8.2 Release 与四个安装包](https://github.com/lieren2012/cloudflare-tunnel-manager/releases/tag/v1.8.2)
 - [三平台成功构建及测试：37453842840](https://github.com/lieren2012/cloudflare-tunnel-manager/actions/runs/37453842840)
 - [成功发布：37455691773](https://github.com/lieren2012/cloudflare-tunnel-manager/actions/runs/37455691773)
-- [运行资源测试脚本](https://github.com/lieren2012/cloudflare-tunnel-manager/blob/v1.8.1/scripts/test-desktop-runtime.mjs)
-- [Windows MSI 解包程序测试脚本](https://github.com/lieren2012/cloudflare-tunnel-manager/blob/v1.8.1/scripts/test-installed-desktop.mjs)
+- [运行资源测试脚本](https://github.com/lieren2012/cloudflare-tunnel-manager/blob/v1.8.2/scripts/test-desktop-runtime.mjs)
+- [Windows MSI 解包程序测试脚本](https://github.com/lieren2012/cloudflare-tunnel-manager/blob/v1.8.2/scripts/test-installed-desktop.mjs)
 
 ## 已通过的范围
 

@@ -3,7 +3,7 @@ layout: home
 hero:
   name: CF Tunnel Manager
   text: Docker 与桌面端的隧道管理面板
-  tagline: v1.8.1 · Windows x64 / macOS Apple Silicon / Linux amd64 · 内置本地运行资源
+  tagline: v1.8.2 · Windows x64 / macOS Apple Silicon / Linux amd64 · 内置本地运行资源
   image:
     src: /logo.svg
     alt: CF Tunnel Manager
@@ -34,7 +34,7 @@ features:
 
 ## 当前发行版本
 
-**v1.8.1**，资料核对日期：**2026-10-07**。[Release 与下载](https://github.com/lieren2012/cloudflare-tunnel-manager/releases/tag/v1.8.1)。
+**v1.8.2**，资料核对日期：**2026-10-07**。[Release 与下载](https://github.com/lieren2012/cloudflare-tunnel-manager/releases/tag/v1.8.2)。
 
 | 版本 | 使用场景 | 入口 |
 | --- | --- | --- |
@@ -43,7 +43,7 @@ features:
 | macOS 桌面 | Apple Silicon（M 系列芯片） | [架构与下载](/guide/desktop#下载与适用系统) |
 | Linux 桌面 | amd64 的 Debian/Ubuntu 系发行版，deb 包 | [安装与依赖](/guide/desktop#linux) |
 
-当前 Release **没有** macOS Intel、Windows ARM64、Linux ARM 桌面安装包，也没有 v1.8.1 AppImage。ARM NAS 请查看 Docker 教程的架构说明。
+当前 Release **没有** macOS Intel、Windows ARM64、Linux ARM 桌面安装包，也没有 v1.8.2 AppImage。ARM NAS 请查看 Docker 教程的架构说明。
 
 ## 先确认你的服务在哪台设备
 

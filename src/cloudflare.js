@@ -24,8 +24,11 @@ async function cf(method, urlPath, body, query) {
   const res = await fetch(url, opt);
   const data = await res.json().catch(() => ({}));
   if (!data.success) {
-    const errs = (data.errors || []).map(e => `${e.code}: ${e.message}`).join('; ');
-    throw new Error(`Cloudflare API 错误: ${errs || `HTTP ${res.status}`}`);
+    const errs = (data.errors || []).map(e => {
+      if (Number(e.code) === 1022) return '1022: This tunnel has active connections. Stop all cloudflared replicas, wait a few minutes for connections to close, then try again.';
+      return `${e.code}: ${e.message}`;
+    }).join('; ');
+    throw new Error(`Cloudflare API error: ${errs || `HTTP ${res.status}`}`);
   }
   return data.result;
 }
@@ -44,7 +47,7 @@ async function testCredentials(accountId, apiToken) {
   const rd = await r.json().catch(() => ({}));
   if (!rd.success) {
     const errs = (rd.errors || []).map(e => e.message).join('; ');
-    throw new Error(`无法访问账号 ${accountId}：${errs || '权限不足'}（需要 Cloudflare Tunnel 读取/编辑 权限）`);
+    throw new Error(`Cannot access account ${accountId}: ${errs || 'permission denied'} (Cloudflare Tunnel read/edit permission required)`);
   }
   return true;
 }

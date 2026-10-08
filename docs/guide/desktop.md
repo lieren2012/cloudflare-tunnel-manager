@@ -1,19 +1,19 @@
 # 桌面端：安装、使用与升级
 
-当前版本 **v1.8.1**。内置 Tauri 桌面界面、Node、本地管理服务、cloudflared 和生产依赖，**不需要 Docker，也不需要另装 Node**。Windows 界面使用系统 WebView2；系统缺少时，安装器的 bootstrapper 可能需要联网安装它，不能将这种环境宣传为完全离线安装。
+当前版本 **v1.8.2**。内置 Tauri 桌面界面、Node、本地管理服务、cloudflared 和生产依赖，**不需要 Docker，也不需要另装 Node**。Windows 界面使用系统 WebView2；系统缺少时，安装器的 bootstrapper 可能需要联网安装它，不能将这种环境宣传为完全离线安装。
 
 ## 下载与适用系统
 
-以下大小来自 v1.8.1 Release（2026-10-07 核对，按 MiB 四舍五入，与 GitHub 的显示一致）：
+以下大小来自 v1.8.2 Release（2026-10-07 核对，按 MiB 四舍五入，与 GitHub 的显示一致）：
 
 | 系统/架构 | 安装包 | 大小 |
 | --- | --- | --- |
-| Windows x64 | [EXE](https://github.com/lieren2012/cloudflare-tunnel-manager/releases/download/v1.8.1/CF.Tunnel.Manager_1.8.1_x64-setup.exe) | 38.3 MB |
-| Windows x64 | [MSI](https://github.com/lieren2012/cloudflare-tunnel-manager/releases/download/v1.8.1/CF.Tunnel.Manager_1.8.1_x64_en-US.msi) | 54.5 MB |
-| macOS Apple Silicon | [DMG](https://github.com/lieren2012/cloudflare-tunnel-manager/releases/download/v1.8.1/CF.Tunnel.Manager_1.8.1_aarch64.dmg) | 57.5 MB |
-| Linux amd64 | [DEB](https://github.com/lieren2012/cloudflare-tunnel-manager/releases/download/v1.8.1/CF.Tunnel.Manager_1.8.1_amd64.deb) | 65.2 MB |
+| Windows x64 | [EXE](https://github.com/lieren2012/cloudflare-tunnel-manager/releases/download/v1.8.2/CF.Tunnel.Manager_1.8.2_x64-setup.exe) | 38.3 MB |
+| Windows x64 | [MSI](https://github.com/lieren2012/cloudflare-tunnel-manager/releases/download/v1.8.2/CF.Tunnel.Manager_1.8.2_x64_en-US.msi) | 54.5 MB |
+| macOS Apple Silicon | [DMG](https://github.com/lieren2012/cloudflare-tunnel-manager/releases/download/v1.8.2/CF.Tunnel.Manager_1.8.2_aarch64.dmg) | 57.5 MB |
+| Linux amd64 | [DEB](https://github.com/lieren2012/cloudflare-tunnel-manager/releases/download/v1.8.2/CF.Tunnel.Manager_1.8.2_amd64.deb) | 65.2 MB |
 
-没有 v1.8.1 AppImage、Intel Mac、Windows ARM64 或 Linux ARM 桌面包。历史 v1.8.0 的小体积包存在服务启动问题，不应作为当前使用入口。
+没有 v1.8.2 AppImage、Intel Mac、Windows ARM64 或 Linux ARM 桌面包。历史 v1.8.0 的小体积包存在服务启动问题，不应作为当前使用入口。
 
 ### Windows
 
@@ -28,7 +28,7 @@
 确认 `uname -m` 为 `x86_64`。在支持 WebKitGTK 4.1 的 Debian/Ubuntu 系发行版安装：
 
 ```bash
-sudo apt install ./CF.Tunnel.Manager_1.8.1_amd64.deb
+sudo apt install ./CF.Tunnel.Manager_1.8.2_amd64.deb
 ```
 
 包管理器可能需要联网安装 GTK/WebKit 依赖。其他发行版、桌面环境和旧版本未逐个测试。需要无图形界面长期运行时，请使用 Docker 版。

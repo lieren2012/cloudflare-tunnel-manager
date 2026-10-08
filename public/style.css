@@ -22,6 +22,10 @@ body {
 .muted { color: var(--muted); }
 .small { font-size: 13px; }
 code { background: #eef2f7; padding: 1px 6px; border-radius: 5px; font-size: 12px; color: #334155; }
+.secret-input { display: flex; align-items: stretch; width: 100%; }
+.secret-input input { flex: 1; min-width: 0; border-radius: 10px 0 0 10px !important; }
+.secret-toggle { border: 1px solid var(--border); border-left: 0; border-radius: 0 10px 10px 0; padding: 0 13px; background: #eef2f7; color: #334155; cursor: pointer; }
+.secret-toggle:hover { background: #e2e8f0; }
 a { color: var(--primary); }
 ::selection { background: rgba(59,130,246,.18); }
 

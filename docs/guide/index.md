@@ -1,6 +1,6 @@
 # 选择版本与快速开始
 
-当前正式发行版 **v1.8.1**。安装包、源码及测试范围以 [Release](https://github.com/lieren2012/cloudflare-tunnel-manager/releases/tag/v1.8.1) 和 [实际验证记录](/guide/verification) 为准。
+当前正式发行版 **v1.8.2**。安装包、源码及测试范围以 [Release](https://github.com/lieren2012/cloudflare-tunnel-manager/releases/tag/v1.8.2) 和 [实际验证记录](/guide/verification) 为准。
 
 ## 选哪个版本
 

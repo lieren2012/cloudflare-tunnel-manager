@@ -8,6 +8,16 @@ let ME = null;          // 当前登录用户 { username, role }
 let cfgCache = {};      // 系统配置缓存（defaultDomain 等）
 const DEFAULT_SITE_NAME = 'Cloudflare Tunnel 管理面板';
 
+function toggleTokenVisibility() {
+  const input = $('#cfgToken');
+  const button = $('#cfgTokenToggle');
+  if (!input || !button) return;
+  const visible = input.type === 'text';
+  input.type = visible ? 'password' : 'text';
+  button.textContent = visible ? '显示' : '隐藏';
+  button.setAttribute('aria-label', visible ? '显示 API Token' : '隐藏 API Token');
+}
+
 // ---------- 站点名称 ----------
 // 自定义站点名：同步到浏览器标签页标题、侧边栏品牌名、登录页标题
 function applySiteName(name) {

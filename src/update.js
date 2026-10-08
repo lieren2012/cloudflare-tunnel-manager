@@ -14,6 +14,7 @@ const { execFile } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 const store = require('./store');
+const { normalizeRemote, fetchUrlOf, candidatesOf } = require('./update-sources');
 
 const APP_DIR = process.env.APP_DIR || path.join(__dirname, '..');
 const BRANCH = process.env.GIT_BRANCH || 'main';
@@ -131,7 +132,7 @@ async function repoInfo() {
   return {
     supported: true,
     appDir: APP_DIR,
-    remote: rm.ok ? rm.out : '',
+    remote: rm.ok ? normalizeRemote(rm.out) : '',
     branch: (br.ok && br.out && br.out !== 'HEAD') ? br.out : BRANCH,
     current: h,
     version: getVersion(),
@@ -144,11 +145,6 @@ function proxyArgs(cfg) {
   const proxy = String(cfg.gitProxy || '').trim();
   if (proxy) a.push('-c', `http.proxy=${proxy}`, '-c', `https.proxy=${proxy}`);
   return a;
-}
-function fetchUrlOf(remote, mirror) {
-  const m = String(mirror || '').trim();
-  if (!m) return remote;
-  return (m.endsWith('/') ? m : m + '/') + remote;
 }
 
 // ---------- 检测更新 ----------
@@ -182,15 +178,10 @@ async function check() {
   const lastGood = String(cfg.lastGoodMirror || '').trim();
 
   let candidates;
-  if (manualMirror) {
-    candidates = [{ name: `自定义加速前缀 ${mirrorName(manualMirror)}`, url: manualMirror },
-      ...BUILTIN_MIRRORS.filter(m => m.url !== manualMirror).map(m => ({ name: m.name, url: m.url }))];
-  } else {
-    candidates = [{ name: '直连 GitHub', url: '' }];
-    if (lastGood) candidates.push({ name: `上次成功的镜像 ${mirrorName(lastGood)}`, url: lastGood });
-    for (const m of BUILTIN_MIRRORS) {
-      if (m.url !== lastGood) candidates.push({ name: m.name, url: m.url });
-    }
+  try {
+    candidates = candidatesOf({ gitMirror: manualMirror, lastGoodMirror: lastGood }, BUILTIN_MIRRORS);
+  } catch (e) {
+    return { ...info, checkedAt, fetchFailed: true, error: e.message };
   }
 
   let f = null;
