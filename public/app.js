@@ -8,14 +8,38 @@ let ME = null;          // 当前登录用户 { username, role }
 let cfgCache = {};      // 系统配置缓存（defaultDomain 等）
 const DEFAULT_SITE_NAME = 'Cloudflare Tunnel 管理面板';
 
-function toggleTokenVisibility() {
+async function toggleTokenVisibility() {
   const input = $('#cfgToken');
   const button = $('#cfgTokenToggle');
   if (!input || !button) return;
   const visible = input.type === 'text';
+  if (!visible && !input.value && input.dataset.saved === 'true') {
+    button.disabled = true;
+    try {
+      const { data } = await api('/config/token', { method: 'POST', body: {}, cache: 'no-store' });
+      input.value = data.apiToken || '';
+      input.dataset.revealed = 'true';
+    } catch (e) {
+      cfgMsg(e.message || 'Unable to reveal API Token', false);
+      return;
+    } finally { button.disabled = false; }
+  }
   input.type = visible ? 'password' : 'text';
+  if (visible && input.dataset.revealed === 'true') input.value = '';
   button.textContent = visible ? '显示' : '隐藏';
+  button.setAttribute('aria-pressed', String(!visible));
   button.setAttribute('aria-label', visible ? '显示 API Token' : '隐藏 API Token');
+}
+
+function hideConfigToken() {
+  const input = $('#cfgToken');
+  if (!input) return;
+  if (input.dataset.revealed === 'true') input.value = '';
+  input.dataset.revealed = 'false';
+  input.type = 'password';
+  const button = $('#cfgTokenToggle');
+  button.setAttribute('aria-label', '显示 API Token');
+  button.setAttribute('aria-pressed', 'false');
 }
 
 // ---------- 站点名称 ----------
@@ -67,6 +91,7 @@ function switchAuth(mode) {
   $('#' + map[mode]).classList.remove('hidden');
 }
 function showLoginView(mode = 'login') {
+  hideConfigToken();
   ME = null;
   $('#app').classList.add('hidden');
   $('#loginView').classList.remove('hidden');
@@ -191,6 +216,9 @@ async function loadConfig() {
     $('#cfgProtocol').value = data.protocol || 'quic';
     $('#cfgEdge').value = data.edgeIpVersion || '4';
     $('#cfgToken').placeholder = data.hasToken ? '已保存（留空表示不修改）' : '请输入 API Token';
+    $('#cfgToken').dataset.saved = data.hasToken ? 'true' : 'false';
+    hideConfigToken();
+    $('#cfgToken').value = '';
     $('#cfgSiteName').value = data.siteName || '';
     $('#cfgNoIndex').checked = data.noIndex !== false;
     await loadZones();

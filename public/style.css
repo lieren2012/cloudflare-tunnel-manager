@@ -264,6 +264,27 @@ button.mini { padding: 5px 10px; font-size: 12px; border-radius: 7px; }
 .guide-perm tr:last-child td { border-bottom: none; }
 .guide-perm .en { color: #94a3b8; font-size: 11px; font-weight: 400; }
 
+/* ============ 系统配置页精修（只作用于 config 页面） ============ */
+.main:has(#page-config) { max-width: 1280px; }
+#page-config { max-width: 1180px; }
+#page-config > h1 { margin-bottom: 24px; }
+#page-config .form-card { padding: 26px 28px; border-color: #dde5f2; }
+#page-config .form-card > h3 { display: flex; align-items: center; gap: 8px; font-size: 17px; margin-bottom: 18px; color: #172554; }
+#page-config .form-card + .form-card { margin-top: 18px; }
+#page-config .form-card label { max-width: 860px; color: #334155; line-height: 1.55; }
+#page-config .form-card input:not([type="checkbox"]), #page-config .form-card select { max-width: 680px; min-height: 42px; background: #fbfdff; border-color: #d7e0ec; }
+#page-config .form-card input:not([type="checkbox"]):hover, #page-config .form-card select:hover { border-color: #a7b9d3; }
+#page-config .cfg-guide { max-width: 980px; margin: 0 0 22px; padding: 14px 18px; }
+#page-config .cfg-guide summary { font-size: 14px; }
+#page-config .form-card > .muted { max-width: 820px; line-height: 1.65; }
+#page-config .form-card > h3:not(:first-child) { margin-top: 28px; padding-top: 22px; border-top: 1px solid #edf1f7; }
+#page-config .btn-row { margin-top: 22px; }
+#page-config .msg { max-width: 820px; padding: 9px 12px; border-radius: 8px; background: #f8fafc; }
+#page-config .msg.ok { background: #ecfdf5; }
+#page-config .msg.err { background: #fff1f2; }
+#page-config .chk { display: flex !important; align-items: flex-start; gap: 9px; max-width: 900px !important; margin-top: 20px !important; }
+#page-config .chk input { flex: 0 0 auto; width: 16px; margin-top: 3px; }
+
 button:disabled { opacity: .6; cursor: not-allowed; transform: none !important; box-shadow: none; }
 
 @media (max-width: 800px) {

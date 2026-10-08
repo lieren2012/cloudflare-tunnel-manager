@@ -284,6 +284,16 @@ app.get('/api/config', (req, res) => {
   res.json({ success: true, data: { accountId: cfg.accountId, protocol: cfg.protocol, edgeIpVersion: cfg.edgeIpVersion, hasToken: !!cfg.apiToken, defaultDomain: cfg.defaultDomain || '', deviceName: cfg.deviceName || '', gitMirror: cfg.gitMirror || '', gitProxy: cfg.gitProxy || '', siteName: cfg.siteName || '', noIndex: cfg.noIndex !== false } });
 });
 
+// Token 只在管理员点击“显示”时单独读取，普通配置加载不会回显密钥。
+app.post('/api/config/token', (req, res, next) => {
+  res.set('Cache-Control', 'no-store');
+  next();
+}, requireAdmin, (req, res) => {
+  const token = store.getConfig().apiToken || '';
+  if (!token) return res.status(404).json({ success: false, error: 'No API Token is saved' });
+  res.json({ success: true, data: { apiToken: token } });
+});
+
 app.post('/api/config', requireAdmin, async (req, res) => {
   try {
     const { accountId, apiToken, protocol, edgeIpVersion, defaultDomain } = req.body || {};
@@ -310,10 +320,11 @@ app.post('/api/config', requireAdmin, async (req, res) => {
   } catch (e) { res.status(400).json({ success: false, error: e.message }); }
 });
 
-app.post('/api/config/test', async (req, res) => {
+app.post('/api/config/test', requireAdmin, async (req, res) => {
   try {
     const { accountId, apiToken } = req.body || {};
-    await cfd.testCredentials((accountId || '').trim(), (apiToken || '').trim());
+    const cfg = store.getConfig();
+    await cfd.testCredentials((accountId || cfg.accountId || '').trim(), (apiToken || cfg.apiToken || '').trim());
     res.json({ success: true });
   } catch (e) { res.status(400).json({ success: false, error: e.message }); }
 });
